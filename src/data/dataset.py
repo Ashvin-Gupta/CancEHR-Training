@@ -1,0 +1,124 @@
+import torch
+import os
+import pickle
+import random
+from tqdm import tqdm
+
+class NightingaleDataset(torch.utils.data.Dataset):
+    """
+    Dataset for running training of a Nightingale model. This class takes a directory (data_dir) of pickled tokenized data
+    produced by the ehr-tokenization pipeline. Each pickle file is loaded and added to self.data if it meets the criteria (defined in __load_data_from_dir__).
+
+    Args:
+        data_dir (str): The directory containing the pickled tokenized data.
+        mode (str): The mode of the dataset, changes how data is loaded and returned. Must be one of "train", "eval".
+        sequence_length (int): The length of the input and target token sequences.
+    """
+    def __init__(self, data_dir: str, mode: str, sequence_length: int = 100) -> None:
+        self.data_dir = data_dir
+        self.sequence_length = sequence_length
+        self.mode = mode
+
+        if mode not in ["train", "eval"]:
+            raise ValueError(f"Invalid mode: {mode}. Must be one of 'train', 'eval'.")
+
+        # Populate self.data
+        self.data = self.__load_data_from_dir__(data_dir)
+
+    def __load_data_from_dir__(self, data_dir: str) -> list:
+        """
+        Loads data from the data directory and populates self.data depending on self.mode.
+
+        Args:
+            data_dir (str): The directory containing the pickled tokenized data.
+
+        Returns:
+            data (list): A list of dictionaries containing the data for each sample.
+        """
+
+        data = []
+
+        # get all the pickle files in the data directory
+        file_paths = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith(".pkl")][:2]
+        
+        for file_path in tqdm(file_paths, desc="Loading data"):
+            with open(file_path, "rb") as f:
+                for subject_data in pickle.load(f):
+                    
+                    # if the token sequence is less than the sequence length + 1, ignore this sample as not enough data
+                    if len(subject_data['tokens']) < self.sequence_length + 1:
+                        continue
+
+                    # if this is a training dataset, then we append the whole token sequence and
+                    # randomly sample a 'start index' in __getitem__ to create a token sequence of length sequence_length.
+                    if self.mode == "train":
+
+                        data.append({
+                            'subject_id': torch.tensor(subject_data['subject_id']),
+                            'tokens': torch.tensor(subject_data['tokens']),
+                            'timestamps': torch.tensor(subject_data['timestamps'])
+                        })
+
+                    # if this is an evaluation dataset, then we preprocess the token sequence and chunk it into
+                    # chunks of length sequence_length and append each chunk to self.data. This is done to have
+                    # a deterministic dataset for evaluation, rather than randomly sampling a start index as in training.
+                    if self.mode == "eval":
+                        
+                        chunks = []
+                        for i in range(0, len(subject_data['tokens']) - self.sequence_length - 1, self.sequence_length):
+                            chunks.append({
+                                'subject_id': torch.tensor(subject_data['subject_id']),
+                                'tokens': torch.tensor(subject_data['tokens'][i:i + self.sequence_length]),
+                                'timestamps': torch.tensor(subject_data['timestamps'][i:i + self.sequence_length])
+                            })
+
+                        data.extend(chunks)
+
+        print(f"Loaded {len(data)} samples from {data_dir}")
+
+        return data
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+
+        x = self.data[idx]
+
+        if self.mode == "train":
+            # If this is a training dataset then we randomly sample a start index and construct the input and target token sequences.
+        
+            # select random start index
+            start_idx = random.randint(0, len(x['tokens']) - self.sequence_length - 1)
+
+            # construct input and target token sequences
+            input_tokens = x['tokens'][start_idx:start_idx + self.sequence_length]
+            input_timestamps = x['timestamps'][start_idx:start_idx + self.sequence_length]
+
+            target_tokens = x['tokens'][start_idx + 1:start_idx + self.sequence_length + 1]
+            target_timestamps = x['timestamps'][start_idx + 1:start_idx + self.sequence_length + 1]
+
+        elif self.mode == "eval":
+            # If this is an evaluation dataset then the sample has been preprocessed to be a chunk of length sequence_length.
+            # We can just return the input and target token sequences as they are.
+            input_tokens = x['tokens'][:-1]
+            input_timestamps = x['timestamps'][:-1]
+            target_tokens = x['tokens'][1:]
+            target_timestamps = x['timestamps'][1:]
+
+        return {
+            'subject_id': x['subject_id'],
+            'input_tokens': input_tokens,
+            'input_timestamps': input_timestamps,
+            'target_tokens': target_tokens,
+            'target_timestamps': target_timestamps
+        }
+
+if __name__ == "__main__":
+
+    dataset_dir = "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/Template Tokenization Pipeline/tuning"
+    dataset = NightingaleDataset(dataset_dir, mode="train", sequence_length=100)
+    
+    for batch in dataset:
+        print(batch)
+        input()
