@@ -1,3 +1,4 @@
 from .lstm import LSTM
+from .transformer_decoder import TransformerDecoder
 
-__all__ = ["LSTM"]
+__all__ = ["LSTM", "TransformerDecoder"]

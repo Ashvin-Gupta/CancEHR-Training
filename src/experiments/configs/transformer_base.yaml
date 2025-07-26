@@ -1,0 +1,28 @@
+name: "transformer_base"
+
+model:
+  type: "transformer"
+  vocab_size: 4000
+  embedding_dim: 128
+  hidden_dim: 2048
+  n_layers: 12
+  dropout: 0.3
+  n_heads: 8
+
+optimiser:
+  type: "adam"
+  lr: 0.0001
+
+loss_function:
+  type: "cross_entropy"
+
+training:
+  epochs: 100
+  device: "cuda"
+
+data:
+  train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/train"
+  val_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/tuning"
+  sequence_length: 512
+  batch_size: 64
+  shuffle: true
