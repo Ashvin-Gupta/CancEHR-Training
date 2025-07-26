@@ -9,6 +9,16 @@ class LSTM(torch.nn.Module):
         self.fc = torch.nn.Linear(hidden_dim, vocab_size)
 
     def forward(self, x):
+        """
+        Forward pass of the LSTM model.
+
+        Args:
+            x (torch.Tensor): The input token sequence of shape (batch_size, sequence_length).
+
+        Returns:
+            y (torch.Tensor): The output logits of shape (batch_size, sequence_length, vocab_size). The logits are the
+                unnormalized probabilities of the next token in the sequence.
+        """
 
         # embed token sequence
         embedded = self.embedding(x)

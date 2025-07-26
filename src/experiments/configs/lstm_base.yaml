@@ -2,15 +2,15 @@ name: "lstm_base"
 
 model:
   type: "lstm"
-  vocab_size: 1000
-  embedding_dim: 256
-  hidden_dim: 2048
+  vocab_size: 4000
+  embedding_dim: 128
+  hidden_dim: 1024
   n_layers: 5
   dropout: 0.3
 
 optimiser:
   type: "adam"
-  lr: 0.001
+  lr: 0.0001
 
 loss_function:
   type: "cross_entropy"
@@ -20,8 +20,8 @@ training:
   device: "cuda"
 
 data:
-  train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/Template Tokenization Pipeline/train"
-  val_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/Template Tokenization Pipeline/tuning"
-  sequence_length: 256
+  train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/train"
+  val_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/tuning"
+  sequence_length: 512
   batch_size: 64
   shuffle: true
