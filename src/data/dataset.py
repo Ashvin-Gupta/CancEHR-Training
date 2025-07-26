@@ -4,7 +4,7 @@ import pickle
 import random
 from tqdm import tqdm
 
-class NightingaleDataset(torch.utils.data.Dataset):
+class NightingaleTrainingDataset(torch.utils.data.Dataset):
     """
     Dataset for running training of a Nightingale model. This class takes a directory (data_dir) of pickled tokenized data
     produced by the ehr-tokenization pipeline. Each pickle file is loaded and added to self.data if it meets the criteria (defined in __load_data_from_dir__).
@@ -39,7 +39,7 @@ class NightingaleDataset(torch.utils.data.Dataset):
         data = []
 
         # get all the pickle files in the data directory
-        file_paths = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith(".pkl")][:2]
+        file_paths = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith(".pkl")]
         
         for file_path in tqdm(file_paths, desc="Loading data"):
             with open(file_path, "rb") as f:
@@ -114,11 +114,59 @@ class NightingaleDataset(torch.utils.data.Dataset):
             'target_timestamps': target_timestamps
         }
 
+class NightingaleEvaluationDataset(torch.utils.data.Dataset):
+    """
+    Dataset for running evaluation of a Nightingale model. This class takes a directory (data_dir) of pickled tokenized data
+    produced by the ehr-tokenization pipeline. Each pickle file is loaded and added to self.data if it meets the criteria (defined in __load_data_from_dir__).
+
+    Args:
+        data_dir (str): The directory containing the pickled tokenized data.
+    """
+    def __init__(self, data_dir: str) -> None:
+        self.data_dir = data_dir
+
+        # Populate self.data
+        self.data = self.__load_data_from_dir__(data_dir)
+
+    def __load_data_from_dir__(self, data_dir: str) -> list:
+        """
+        Loads data from the data directory and populates self.data.
+
+        Args:
+            data_dir (str): The directory containing the pickled tokenized data.
+
+        Returns:
+            data (list): A list of dictionaries containing the data for each sample.
+        """
+
+        data = []
+
+        # get all the pickle files in the data directory
+        file_paths = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith(".pkl")][:2]
+
+        for file_path in tqdm(file_paths, desc="Loading data"):
+            with open(file_path, "rb") as f:
+                for subject_data in pickle.load(f):
+                    data.append({
+                        'subject_id': torch.tensor(subject_data['subject_id']),
+                        'tokens': torch.tensor(subject_data['tokens']),
+                        'timestamps': torch.tensor(subject_data['timestamps'])
+                    })
+        
+        return data
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        return self.data[idx]
+    
 if __name__ == "__main__":
 
     dataset_dir = "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/Template Tokenization Pipeline/tuning"
-    dataset = NightingaleDataset(dataset_dir, mode="train", sequence_length=100)
+    # dataset = NightingaleTrainingDataset(dataset_dir, mode="train", sequence_length=100)
+    dataset = NightingaleEvaluationDataset(dataset_dir)
     
-    for batch in dataset:
-        print(batch)
+    for datapoint in dataset:
+        print(datapoint)
         input()

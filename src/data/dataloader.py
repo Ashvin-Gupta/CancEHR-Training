@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
-from .dataset import NightingaleDataset
+from .dataset import NightingaleTrainingDataset
 
-def get_dataloader(dataset_dir: str, batch_size: int, shuffle: bool = True, sequence_length: int = 100, mode: str = "train"):
+def get_dataloader(dataset_dir: str, batch_size: int, shuffle: bool = True, sequence_length: int = 100, mode: str = "train", num_workers: int = 4):
     """
     Creates a dataloader for a Nightingale dataset.
 
@@ -19,8 +19,10 @@ def get_dataloader(dataset_dir: str, batch_size: int, shuffle: bool = True, sequ
     if mode not in ["train", "eval"]:
         raise ValueError(f"Invalid mode: {mode}. Must be one of 'train', 'eval'.")
 
-    dataset = NightingaleDataset(dataset_dir, mode, sequence_length)
-    return DataLoader(dataset, batch_size, shuffle)
+    dataset = NightingaleTrainingDataset(dataset_dir, mode, sequence_length)
+    dataloader = DataLoader(dataset, batch_size, shuffle, num_workers=num_workers)
+
+    return dataloader
 
 
 if __name__ == "__main__":
