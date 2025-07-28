@@ -2,7 +2,7 @@ import yaml
 import os
 import shutil   
 from src.data.dataloader import get_dataloader
-from src.models import LSTM, TransformerDecoder
+from src.experiments.utils import load_model
 import torch
 from src.training.train import train
 
@@ -57,21 +57,8 @@ def run_experiment(config_path: str, experiment_name: str):
         mode="eval"
     )
 
-    # Create model
-    if config['model']['type'] == "lstm":
-        model = LSTM(config['model']['vocab_size'], config['model']['embedding_dim'], config['model']['hidden_dim'], config['model']['n_layers'], config['model']['dropout'])
-    elif config['model']['type'] == "transformer":
-        model = TransformerDecoder(
-            vocab_size=config['model']['vocab_size'],
-            embedding_dim=config['model']['embedding_dim'],
-            hidden_dim=config['model']['hidden_dim'],
-            n_layers=config['model']['n_layers'],
-            dropout=config['model']['dropout'],
-            n_heads=config['model']['n_heads'],
-            max_len=config['data']['sequence_length']
-        )
-    else:
-        raise ValueError(f"Model type {config['model']['type']} not supported")
+    # Load model
+    model = load_model(config['model'])
 
     # Create loss function
     if config['loss_function']['type'] == "cross_entropy":
