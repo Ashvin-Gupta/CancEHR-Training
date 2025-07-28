@@ -102,6 +102,15 @@ if __name__ == "__main__":
 
     # create dataloader
     evaluation_dataset_dir = "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/tuning"
-    evaluation_dataset = NightingaleEvaluationDataset(evaluation_dataset_dir)
+    vocab_path = "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/vocab.csv"
+    evaluation_dataset = NightingaleEvaluationDataset(evaluation_dataset_dir, vocab_path)
 
-    run_evaluation(args.experiment_name, evaluation_dataset, torch.device("cpu"))
+    for datapoint in evaluation_dataset:
+        print(len(datapoint['tokens']))
+        print(datapoint['subject_id'])
+        end_tokens = datapoint['tokens'][-30:]
+        token_strings = evaluation_dataset.tokens_to_strings(end_tokens)
+        print(list(zip(end_tokens, token_strings)))
+        input()
+
+    # run_evaluation(args.experiment_name, evaluation_dataset, torch.device("cpu"))

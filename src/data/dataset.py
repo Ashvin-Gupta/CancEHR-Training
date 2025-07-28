@@ -3,6 +3,7 @@ import os
 import pickle
 import random
 from tqdm import tqdm
+import pandas as pd
 
 class NightingaleTrainingDataset(torch.utils.data.Dataset):
     """
@@ -122,11 +123,15 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
     Args:
         data_dir (str): The directory containing the pickled tokenized data.
     """
-    def __init__(self, data_dir: str) -> None:
+    def __init__(self, data_dir: str, vocab_path: str) -> None:
         self.data_dir = data_dir
 
         # Populate self.data
         self.data = self.__load_data_from_dir__(data_dir)
+        self.subject_id_map = {int(subject_id): idx for idx, subject_id in enumerate(data['subject_id'] for data in self.data)}
+
+        # Load vocab
+        self.vocab = pd.read_csv(vocab_path, index_col=False)
 
     def __load_data_from_dir__(self, data_dir: str) -> list:
         """
@@ -155,6 +160,62 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
         
         return data
     
+    def get_data_by_subject_id(self, subject_id: int) -> list:
+        """
+        Returns a list of data points for a given subject_id.
+
+        Args:
+            subject_id (int): The subject_id to get data for.
+
+        Returns:
+            data (dict): A dictionary containing the data for the given subject_id.
+        """
+        
+        data_index = self.subject_id_map[subject_id]
+        return self.data[data_index]
+    
+    def token_to_string(self, token: int) -> str:
+        """
+        Converts a token to a string. If the token is not found in the vocab, raises a ValueError.
+
+        Args:
+            token (int): The token to convert to a string.
+
+        Returns:
+            string (str): The string corresponding to the token.
+        """
+        try:
+            return self.vocab.iloc[token]['str']
+        except IndexError:
+            raise ValueError(f"Token {token} not found in vocab")
+    
+    def string_to_token(self, string: str) -> int:
+        """
+        Converts a string to a token. If the string is not found in the vocab, raises a ValueError.
+
+        Args:
+            string (str): The string to convert to a token.
+
+        Returns:
+            token (int): The token corresponding to the string.
+        """
+        try:
+            return int(self.vocab[self.vocab['str'] == string]['token'].values[0])
+        except IndexError:
+            raise ValueError(f"String {string} not found in vocab")
+            
+    def tokens_to_strings(self, tokens: torch.Tensor) -> list:
+        """
+        Converts a list of tokens to a list of strings.
+
+        Args:
+            tokens (torch.Tensor): The tokens to convert to strings.
+
+        Returns:
+            strings (list): A list of strings.
+        """
+        return [self.vocab.iloc[token]['str'] for token in tokens.tolist()]
+    
     def __len__(self):
         return len(self.data)
     
@@ -166,6 +227,10 @@ if __name__ == "__main__":
     dataset_dir = "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/Template Tokenization Pipeline/tuning"
     # dataset = NightingaleTrainingDataset(dataset_dir, mode="train", sequence_length=100)
     dataset = NightingaleEvaluationDataset(dataset_dir)
+
+    data = dataset.get_data_by_subject_id(10032725)
+    print(data)
+    exit()
     
     for datapoint in dataset:
         print(datapoint)
