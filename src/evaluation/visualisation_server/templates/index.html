@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Model Experiments - Nightingale{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Model Experiments</h1>
+    <p class="hero-subtitle">
+        Trained Models and Results
+    </p>
+</section>
+
+<section class="experiments">
+    {% if experiments %}
+    <h2>Experiment Results ({{ experiments|length }} total)</h2>
+    
+    <div class="experiments-grid">
+        {% for experiment in experiments %}
+        <div class="experiment-card">
+            <div class="experiment-header">
+                <h3>{{ experiment.name }}</h3>
+                <span class="model-type">{{ experiment.model_type|upper }}</span>
+            </div>
+            
+            <div class="experiment-details">
+                <div class="detail-row">
+                    <span>Model Type:</span>
+                    <span>{{ experiment.model_type|title }}</span>
+                </div>
+                
+                {% if experiment.dataset_name %}
+                <div class="detail-row">
+                    <span>Dataset:</span>
+                    <span class="dataset-name">{{ experiment.dataset_name }}</span>
+                </div>
+                {% endif %}
+                
+                {% if experiment.sequence_length %}
+                <div class="detail-row">
+                    <span>Sequence Length:</span>
+                    <span>{{ experiment.sequence_length }}</span>
+                </div>
+                {% endif %}
+                
+                {% if experiment.model_size_mb %}
+                <div class="detail-row">
+                    <span>Model Size:</span>
+                    <span class="model-size">{{ experiment.model_size_mb }} MB</span>
+                </div>
+                {% endif %}
+                
+                {% if experiment.best_val_loss %}
+                <div class="detail-row">
+                    <span>Best Val Loss:</span>
+                    <span class="val-loss">{{ "%.4f"|format(experiment.best_val_loss) }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="detail-row">
+                    <span>Files:</span>
+                    <span>
+                        {% if experiment.has_loss_log %}📊 Loss Log{% endif %}
+                        {% if experiment.has_simulations %}🔬 Simulations{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-experiments">
+        <h3>No Experiments Found</h3>
+        <p>No experiment results found in the results directory.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', path='/js/main.js') }}"></script>
+{% endblock %} 
