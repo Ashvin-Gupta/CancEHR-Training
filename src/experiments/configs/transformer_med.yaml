@@ -1,12 +1,13 @@
-name: "lstm_base"
+name: "transformer_base"
 
 model:
-  type: "lstm"
+  type: "transformer"
   vocab_size: 4000
-  embedding_dim: 128
-  hidden_dim: 1024
-  n_layers: 5
+  model_dim: 1024
+  n_layers: 12
   dropout: 0.3
+  n_heads: 64
+  context_length: 2048
 
 optimiser:
   type: "adam"
@@ -16,13 +17,13 @@ loss_function:
   type: "cross_entropy"
 
 training:
-  epochs: 100
+  epochs: 50
   device: "cuda"
 
 data:
   train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/train"
   val_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/tuning"
   vocab_path: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/vocab.csv"
-  sequence_length: 512
-  batch_size: 64
+  sequence_length: 2048
+  batch_size: 256
   shuffle: true

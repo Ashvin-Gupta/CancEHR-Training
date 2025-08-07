@@ -3,11 +3,11 @@ name: "transformer_base"
 model:
   type: "transformer"
   vocab_size: 4000
-  embedding_dim: 128
-  hidden_dim: 2048
-  n_layers: 12
+  model_dim: 512
+  n_layers: 4
   dropout: 0.3
-  n_heads: 8
+  n_heads: 4
+  context_length: 512
 
 optimiser:
   type: "adam"
@@ -21,8 +21,9 @@ training:
   device: "cuda"
 
 data:
-  train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/train"
-  val_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/quantile_bin_preprocessing_full/tuning"
+  train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/train"
+  val_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/tuning"
+  vocab_path: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/vocab.csv"
   sequence_length: 512
   batch_size: 64
   shuffle: true
