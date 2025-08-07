@@ -2,7 +2,7 @@ import yaml
 import os
 import shutil   
 from src.data.dataloader import get_dataloader
-from models.utils import load_model
+from src.models.utils import load_model
 import torch
 from src.training.train import train
 import pandas as pd
@@ -108,7 +108,7 @@ def validate_config(config: dict):
             raise ValueError(f"Field '{field}' must be of type {expected_type.__name__}")
     
     # Validate model section
-    model_required = ['type', 'vocab_size', 'embedding_dim', 'hidden_dim', 'n_layers', 'dropout']
+    model_required = ['type', 'vocab_size', 'model_dim', 'n_layers', 'dropout', 'n_heads', 'context_length']
     for field in model_required:
         if field not in config['model']:
             raise ValueError(f"Missing required field in model: '{field}'")
