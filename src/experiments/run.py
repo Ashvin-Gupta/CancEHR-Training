@@ -2,9 +2,10 @@ import yaml
 import os
 import shutil   
 from src.data.dataloader import get_dataloader
-from src.experiments.utils import load_model
+from models.utils import load_model
 import torch
 from src.training.train import train
+import pandas as pd
 
 def run_experiment(config_path: str, experiment_name: str):
     """
@@ -40,6 +41,10 @@ def run_experiment(config_path: str, experiment_name: str):
     # Save config to experiment directory
     with open(os.path.join(experiment_dir, "config.yaml"), "w") as f:
         yaml.dump(config, f)
+
+    # save the vocab to the experiment directory
+    vocab_df = pd.read_csv(config['data']['vocab_path'])
+    vocab_df.to_csv(os.path.join(experiment_dir, "vocab.csv"), index=False)
 
     # Create dataloaders
     train_dataloader = get_dataloader(
