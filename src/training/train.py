@@ -53,7 +53,7 @@ def train(model, experiment_dir, train_dataloader, val_dataloader, optimiser, lo
             logger.info(f" - Starting evaluation")
 
             val_pb = tqdm(val_dataloader, desc="Evaluating", leave=False)
-            for batch in val_pb:
+            for idx, batch in enumerate(val_pb):
                 logits = model(batch['input_tokens'].to(device)) # (batch_size, sequence_length, vocab_size)
                 logits = logits.view(-1, logits.shape[-1]) # (batch_size * sequence_length, vocab_size)
 
