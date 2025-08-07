@@ -6,6 +6,31 @@ from src.models.utils import load_model
 import torch
 from src.training.train import train
 import pandas as pd
+import logging
+
+def create_logger(experiment_dir: str, experiment_name: str):
+    """
+    Creates a logger for an experiment.
+    """
+    logger = logging.getLogger(experiment_name)
+    logger.setLevel(logging.INFO)
+
+    # create file handler
+    file_handler = logging.FileHandler(os.path.join(experiment_dir, "training.log"))
+    file_handler.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
+
+    # create console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
+
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    return logger
 
 def run_experiment(config_path: str, experiment_name: str):
     """
@@ -38,6 +63,14 @@ def run_experiment(config_path: str, experiment_name: str):
     # Create experiment directory
     os.makedirs(experiment_dir, exist_ok=True)
 
+    # create experiment logger
+    logger = create_logger(experiment_dir, experiment_name)
+
+    logger.info(f"Experiment directory: {experiment_dir}")
+    logger.info(f"Experiment name: {experiment_name}")
+    logger.info(f"Config: {config}")
+    logger.info(f"Training on device: {config['training']['device']}")
+
     # Save config to experiment directory
     with open(os.path.join(experiment_dir, "config.yaml"), "w") as f:
         yaml.dump(config, f)
@@ -52,14 +85,16 @@ def run_experiment(config_path: str, experiment_name: str):
         config['data']['batch_size'], 
         config['data']['shuffle'],
         config['data']['sequence_length'],
-        mode="train"
+        mode="train",
+        logger=logger
     )
     val_dataloader = get_dataloader(
         config['data']['val_dataset_dir'], 
         config['data']['batch_size'], 
         config['data']['shuffle'],
         config['data']['sequence_length'],
-        mode="eval"
+        mode="eval",
+        logger=logger
     )
 
     # Load model
@@ -86,7 +121,9 @@ def run_experiment(config_path: str, experiment_name: str):
         optimiser=optimiser, 
         loss_function=loss_function, 
         device=config['training']['device'],
-        epochs=config['training']['epochs'])
+        epochs=config['training']['epochs'],
+        logger=logger
+    )
 
 
 def validate_config(config: dict):

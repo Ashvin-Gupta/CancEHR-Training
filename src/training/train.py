@@ -1,10 +1,11 @@
 import torch
+from logging import Logger
 from tqdm import tqdm
 from src.models.lstm import LSTM
 from src.data.dataloader import get_dataloader
 import os
 
-def train(model, experiment_dir, train_dataloader, val_dataloader, optimiser, loss_function, device, epochs: int = 10):
+def train(model, experiment_dir, train_dataloader, val_dataloader, optimiser, loss_function, device, epochs: int = 10, logger: Logger = None):
 
     model.to(device)
 
@@ -21,11 +22,13 @@ def train(model, experiment_dir, train_dataloader, val_dataloader, optimiser, lo
     epoch_pb = tqdm(range(epochs), desc="Epochs")
     for epoch in epoch_pb:
 
+        logger.info(f" - Starting epoch {epoch} of {epochs}")
+
         model.train()
 
         # train
         train_pb = tqdm(train_dataloader, desc="Training", leave=False)
-        for batch in train_pb:
+        for idx, batch in enumerate(train_pb):
 
             optimiser.zero_grad()
             logits = model(batch['input_tokens'].to(device)) # (batch_size, sequence_length, vocab_size)
@@ -39,9 +42,16 @@ def train(model, experiment_dir, train_dataloader, val_dataloader, optimiser, lo
 
             train_loss.append(loss.item())
 
+            # log every 10% of the way through the epoch
+            if idx % (len(train_dataloader) // 10) == 0:
+                logger.info(f"  -- Completed training batch {idx} of {len(train_dataloader)} ({idx / len(train_dataloader) * 100:.2f}%) | mean running train loss: {sum(train_loss) / len(train_loss)}")
+
         # evaluate
         model.eval()
         with torch.no_grad():
+
+            logger.info(f" - Starting evaluation")
+
             val_pb = tqdm(val_dataloader, desc="Evaluating", leave=False)
             for batch in val_pb:
                 logits = model(batch['input_tokens'].to(device)) # (batch_size, sequence_length, vocab_size)
@@ -51,13 +61,20 @@ def train(model, experiment_dir, train_dataloader, val_dataloader, optimiser, lo
                 loss = loss_function(logits, targets)
                 val_loss.append(loss.item())
 
+                # log every 10% of the way through the epoch
+                if idx % (len(val_dataloader) // 10) == 0:
+                    logger.info(f"  -- Completed evaluation batch {idx} of {len(val_dataloader)} ({idx / len(val_dataloader) * 100:.2f}%) | mean running val loss: {sum(val_loss) / len(val_loss)}")
+
         avg_train_loss = sum(train_loss) / len(train_loss)
         avg_val_loss = sum(val_loss) / len(val_loss)
 
+        logger.info(f" - Completed epoch {epoch} of {epochs} | mean train loss: {avg_train_loss} | mean val loss: {avg_val_loss}")
+
         # save best model
-        if True: #avg_val_loss < best_val_loss:
+        if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             torch.save(model.state_dict(), os.path.join(experiment_dir, "model.pth"))
+            logger.info(f" - Saved best model with new best val loss: {best_val_loss}")
 
         # log loss to file
         with open(loss_log_filepath, "a") as f:

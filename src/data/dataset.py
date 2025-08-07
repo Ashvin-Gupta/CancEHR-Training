@@ -4,6 +4,7 @@ import pickle
 import random
 from tqdm import tqdm
 import pandas as pd
+from logging import Logger
 
 class NightingaleTrainingDataset(torch.utils.data.Dataset):
     """
@@ -15,10 +16,11 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         mode (str): The mode of the dataset, changes how data is loaded and returned. Must be one of "train", "eval".
         sequence_length (int): The length of the input and target token sequences.
     """
-    def __init__(self, data_dir: str, mode: str, sequence_length: int = 100) -> None:
+    def __init__(self, data_dir: str, mode: str, sequence_length: int = 100, logger: Logger = None) -> None:
         self.data_dir = data_dir
         self.sequence_length = sequence_length
         self.mode = mode
+        self.logger = logger
 
         if mode not in ["train", "eval"]:
             raise ValueError(f"Invalid mode: {mode}. Must be one of 'train', 'eval'.")
@@ -41,6 +43,8 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
 
         # get all the pickle files in the data directory
         file_paths = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith(".pkl")]
+
+        self.logger.info(f"Loading {len(file_paths)} files from {data_dir} for {self.mode} dataset")
         
         for file_path in tqdm(file_paths, desc="Loading data"):
             with open(file_path, "rb") as f:
@@ -75,7 +79,7 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
 
                         data.extend(chunks)
 
-        print(f"Loaded {len(data)} samples from {data_dir}")
+        self.logger.info(f"Loaded {len(data)} samples from {data_dir} for {self.mode} dataset")
 
         return data
 
@@ -123,7 +127,7 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
     Args:
         data_dir (str): The directory containing the pickled tokenized data.
     """
-    def __init__(self, data_dir: str, vocab_path: str) -> None:
+    def __init__(self, data_dir: str, vocab_path: str, logger: Logger = None) -> None:
         self.data_dir = data_dir
 
         # Populate self.data
@@ -149,6 +153,8 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
         # get all the pickle files in the data directory
         file_paths = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith(".pkl")][:2]
 
+        self.logger.info(f"Loading {len(file_paths)} files from {data_dir} for evaluation dataset")
+
         for file_path in tqdm(file_paths, desc="Loading data"):
             with open(file_path, "rb") as f:
                 for subject_data in pickle.load(f):
@@ -157,6 +163,8 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
                         'tokens': torch.tensor(subject_data['tokens']),
                         'timestamps': torch.tensor(subject_data['timestamps'])
                     })
+        
+        self.logger.info(f"Loaded {len(data)} samples from {data_dir} for evaluation dataset")
         
         return data
     
