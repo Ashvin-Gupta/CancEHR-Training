@@ -55,7 +55,7 @@ def train(model, experiment_dir, train_dataloader, val_dataloader, optimiser, lo
         avg_val_loss = sum(val_loss) / len(val_loss)
 
         # save best model
-        if avg_val_loss < best_val_loss:
+        if True: #avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             torch.save(model.state_dict(), os.path.join(experiment_dir, "model.pth"))
 
