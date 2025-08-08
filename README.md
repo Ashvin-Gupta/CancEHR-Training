@@ -1,4 +1,7 @@
-# nightingale
+<h1 align="center">
+  <img src="src/evaluation/visualisation_server/static/images/logo.png" width="64" style="vertical-align:middle;margin-right:8px;">
+  nightingale ai
+</h1>
 
 This repo is for training sequence models on tokenized medical event datasets produced the `ehr-tokenization` repo.
 
