@@ -260,7 +260,7 @@
             <select id="experiment-select" class="control-select">
                 <option value="">Choose an experiment...</option>
                 {% for experiment in experiments %}
-                <option value="{{ experiment.name }}" 
+                <option value="{{ experiment.name }}"
                         data-model-type="{{ experiment.model_type }}"
                         data-vocab-size="{{ experiment.vocab_size }}"
                         data-sequence-length="{{ experiment.sequence_length }}">
@@ -274,7 +274,7 @@
 
     <div class="playground-section">
         <h3>Input Tokens</h3>
-        
+
         <div class="input-methods">
             <div class="input-method-btn active" data-method="token-ids">Token IDs</div>
             <div class="input-method-btn" data-method="search-tokens">Search Tokens</div>
@@ -283,7 +283,7 @@
         <div id="token-ids-section" class="input-method-section active">
             <div class="form-group">
                 <label for="token-ids-input">Enter Token IDs (comma-separated):</label>
-                <input type="text" id="token-ids-input" class="form-control" 
+                <input type="text" id="token-ids-input" class="form-control"
                        placeholder="e.g., 0,15,234,67">
             </div>
         </div>
@@ -291,7 +291,7 @@
         <div id="search-tokens-section" class="input-method-section">
             <div class="form-group">
                 <label for="token-search">Search and Add Tokens:</label>
-                <input type="text" id="token-search" class="form-control" 
+                <input type="text" id="token-search" class="form-control"
                        placeholder="Search for tokens by their string representation">
                 <div id="search-results" class="search-results" style="display: none;"></div>
             </div>
@@ -360,7 +360,7 @@ document.querySelectorAll('.input-method-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.input-method-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.input-method-section').forEach(s => s.classList.remove('active'));
-        
+
         btn.classList.add('active');
         document.getElementById(`${btn.dataset.method}-section`).classList.add('active');
     });
@@ -378,7 +378,7 @@ experimentSelect.addEventListener('change', async () => {
     }
 
     currentExperiment = selectedOption.value;
-    
+
     // Show experiment info
     experimentInfo.innerHTML = `
         <strong>Model Type:</strong> ${selectedOption.dataset.modelType}<br>
@@ -444,7 +444,7 @@ function searchTokens(query) {
     }
 
     if (matches.length > 0) {
-        searchResults.innerHTML = matches.map(match => 
+        searchResults.innerHTML = matches.map(match =>
             `<div class="search-result-item" onclick="addToken(${match.id})">
                 <span class="token-display">${escapeHtml(match.str)}</span> (ID: ${match.id})
             </div>`
@@ -473,22 +473,22 @@ function appendTokenAndPredict(tokenId, event) {
         event.stopPropagation();
         event.stopImmediatePropagation();
     }
-    
+
     // Add the token to the sequence
     currentTokens.push(tokenId);
-    
+
     // Update displays
     updateCurrentTokensDisplay();
     updatePredictButton();
-    
+
     // Clear the token ID input to reflect the current state
     tokenIdsInput.value = currentTokens.join(',');
-    
+
     // Automatically trigger a new prediction
     if (currentExperiment && currentTokens.length > 0) {
         predictBtn.click();
     }
-    
+
     // Explicitly return false to prevent any default behavior
     return false;
 }
@@ -550,7 +550,7 @@ predictBtn.addEventListener('click', async () => {
         });
 
         const data = await response.json();
-        
+
         if (data.error) {
             throw new Error(data.error);
         }
@@ -566,7 +566,7 @@ predictBtn.addEventListener('click', async () => {
 
 function displayPredictions(data) {
     const maxProb = Math.max(...data.predictions.map(p => p.probability));
-    
+
     const table = `
         <table class="predictions-table">
             <thead>
@@ -608,4 +608,4 @@ function displayPredictions(data) {
 // Initialize
 updatePredictButton();
 </script>
-{% endblock %} 
+{% endblock %}

@@ -19,7 +19,7 @@ function setupEventListeners() {
             checkServerStatus();
         });
     }
-    
+
     // Simple navigation enhancement
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
@@ -39,7 +39,7 @@ async function checkServerStatus() {
     try {
         const response = await fetch('/health');
         const data = await response.json();
-        
+
         if (data.status === 'healthy') {
             showNotification('Server Status: Healthy', 'success');
         } else {
@@ -57,19 +57,19 @@ function showNotification(message, type = 'info') {
     if (existing) {
         existing.remove();
     }
-    
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
-    
+
     // Style the notification with brain-inspired colors
     Object.assign(notification.style, {
         position: 'fixed',
         top: '20px',
         right: '20px',
         padding: '12px 16px',
-        backgroundColor: type === 'success' ? 'var(--color-primary)' : 
-                        type === 'error' ? '#ef4444' : 
+        backgroundColor: type === 'success' ? 'var(--color-primary)' :
+                        type === 'error' ? '#ef4444' :
                         type === 'warning' ? '#f59e0b' : 'var(--color-accent)',
         color: 'white',
         fontFamily: 'var(--font-mono)',
@@ -78,9 +78,9 @@ function showNotification(message, type = 'info') {
         zIndex: '1000',
         animation: 'slideIn 0.3s ease-out'
     });
-    
+
     document.body.appendChild(notification);
-    
+
     // Auto-remove after 3 seconds
     setTimeout(() => {
         if (notification.parentNode) {
@@ -103,7 +103,7 @@ style.textContent = `
             opacity: 1;
         }
     }
-    
+
     @keyframes slideOut {
         from {
             transform: translateX(0);
@@ -121,4 +121,4 @@ document.head.appendChild(style);
 window.Nightingale = {
     checkStatus: checkServerStatus,
     notify: showNotification
-}; 
+};

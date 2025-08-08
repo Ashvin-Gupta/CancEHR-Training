@@ -21,9 +21,9 @@ training:
   device: "cuda"
 
 data:
-  train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/train"
+  train_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/tuning"
   val_dataset_dir: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/tuning"
   vocab_path: "/home/joshua/data/mimic_meds/mimic_iv_meds/tokenized_data/ethos_timetokens/vocab.csv"
   sequence_length: 512
-  batch_size: 64
+  batch_size: 16
   shuffle: true

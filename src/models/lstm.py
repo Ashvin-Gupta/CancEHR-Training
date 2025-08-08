@@ -1,14 +1,23 @@
 import torch
 
-class LSTM(torch.nn.Module):
 
-    def __init__(self, vocab_size: int, embedding_dim: int, hidden_dim: int, n_layers: int = 2, dropout: float = 0.5):
+class LSTM(torch.nn.Module):
+    def __init__(
+            self,
+            vocab_size: int,
+            embedding_dim: int,
+            hidden_dim: int,
+            n_layers: int = 2,
+            dropout: float = 0.5,
+        ):
         super().__init__()
         self.embedding = torch.nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = torch.nn.LSTM(embedding_dim, hidden_dim, n_layers, dropout=dropout, batch_first=True)
+        self.lstm = torch.nn.LSTM(
+            embedding_dim, hidden_dim, n_layers, dropout=dropout, batch_first=True
+        )
         self.fc = torch.nn.Linear(hidden_dim, vocab_size)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Forward pass of the LSTM model.
 
@@ -19,7 +28,6 @@ class LSTM(torch.nn.Module):
             y (torch.Tensor): The output logits of shape (batch_size, sequence_length, vocab_size). The logits are the
                 unnormalized probabilities of the next token in the sequence.
         """
-
         # embed token sequence
         embedded = self.embedding(x)
 
@@ -31,8 +39,8 @@ class LSTM(torch.nn.Module):
 
         return y
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # define params
     batch_size = 3
     sequence_length = 10

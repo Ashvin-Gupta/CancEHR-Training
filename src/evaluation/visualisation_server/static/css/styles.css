@@ -46,14 +46,14 @@ Spacing:
   --color-text-secondary: #64748b;
   --color-border: #e2e8f0;
   --color-subtle: #f8fafc;
-  
+
   /* Typography */
   --font-mono: Monaco, 'Menlo', 'Ubuntu Mono', monospace;
   --font-size-sm: 14px;
   --font-size-base: 16px;
   --font-size-lg: 24px;
   --font-size-xl: 32px;
-  
+
   /* Spacing */
   --space-xs: 8px;
   --space-sm: 16px;
@@ -61,7 +61,7 @@ Spacing:
   --space-lg: 32px;
   --space-xl: 48px;
   --space-2xl: 64px;
-  
+
   /* Layout */
   --border-radius: 4px;
   --max-width: 1000px;
@@ -654,49 +654,49 @@ body {
     padding: 0 var(--space-sm);
     height: 70px;
   }
-  
+
   .nav-logo {
     width: 40px !important;
     height: 40px !important;
   }
-  
+
   .nav-title {
     font-size: var(--font-size-base);
   }
-  
+
   .nav-links {
     gap: var(--space-sm);
   }
-  
+
   .hero h1 {
     font-size: var(--font-size-lg);
   }
-  
+
   .experiments-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .controls-panel {
     padding: var(--space-sm);
   }
-  
+
   .model-checkboxes {
     grid-template-columns: 1fr;
   }
-  
+
   .chart-container {
     height: 400px;
     padding: var(--space-sm);
   }
-  
+
   .models-list ul {
     flex-direction: column;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .status-grid {
     grid-template-columns: 1fr;
   }
@@ -707,4 +707,4 @@ body {
 .text-secondary { color: var(--color-text-secondary); }
 .mb-sm { margin-bottom: var(--space-sm); }
 .mb-md { margin-bottom: var(--space-md); }
-.mb-lg { margin-bottom: var(--space-lg); } 
+.mb-lg { margin-bottom: var(--space-lg); }

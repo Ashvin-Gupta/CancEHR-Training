@@ -29,7 +29,7 @@
                 {% endfor %}
             </div>
         </div>
-        
+
         <div class="control-group">
             <h3>Curves to Show:</h3>
             <div class="curve-options">
@@ -48,11 +48,11 @@
             </div>
         </div>
     </div>
-    
+
     <div class="chart-container">
         <canvas id="lossChart"></canvas>
     </div>
-    
+
     <div class="models-list">
         <h3>Available Models:</h3>
         <ul>
@@ -79,7 +79,7 @@
 <script>
     // Store the loss data globally
     const lossData = JSON.parse('{{ loss_data|tojson|safe }}');
-    
+
     // Color palette for different models
     const colors = [
         '#e11d48', // Bright red
@@ -103,12 +103,12 @@
         '#0f766e', // Teal
         '#a21caf'  // Fuchsia
     ];
-    
+
     let chart;
-    
+
     function createChart() {
         const ctx = document.getElementById('lossChart').getContext('2d');
-        
+
         chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -238,28 +238,28 @@
                 }
             }
         });
-        
+
         updateChart();
     }
-    
+
     function updateChart() {
         const selectedModels = [];
         const modelCheckboxes = document.querySelectorAll('[id^="model-"]');
-        
+
         modelCheckboxes.forEach((checkbox, index) => {
             if (checkbox.checked) {
                 selectedModels.push(index);
             }
         });
-        
+
         const curveType = document.querySelector('input[name="curve-type"]:checked').value;
-        
+
         const datasets = [];
-        
+
         selectedModels.forEach(modelIndex => {
             const model = lossData[modelIndex];
             const color = colors[modelIndex % colors.length];
-            
+
             // Training loss - solid line with transparency
             if (curveType === 'both' || curveType === 'train') {
                 datasets.push({
@@ -278,7 +278,7 @@
                     pointHoverBorderWidth: 2
                 });
             }
-            
+
             // Validation loss - solid line, full opacity
             if (curveType === 'both' || curveType === 'val') {
                 datasets.push({
@@ -298,24 +298,24 @@
                 });
             }
         });
-        
+
         chart.data.datasets = datasets;
         chart.update();
     }
-    
+
     // Initialize chart when page loads
     document.addEventListener('DOMContentLoaded', function() {
         createChart();
-        
+
         // Update chart when checkboxes or radio buttons change
         document.querySelectorAll('[id^="model-"]').forEach(checkbox => {
             checkbox.addEventListener('change', updateChart);
         });
-        
+
         document.querySelectorAll('input[name="curve-type"]').forEach(radio => {
             radio.addEventListener('change', updateChart);
         });
     });
 </script>
 {% endif %}
-{% endblock %} 
+{% endblock %}

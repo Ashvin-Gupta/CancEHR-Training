@@ -28,14 +28,14 @@
                 {% endfor %}
             </select>
         </div>
-        
+
         <div class="control-group">
             <h3>Select Simulation:</h3>
             <select id="simulation-select" class="control-select" disabled>
                 <option value="">-- Select experiment first --</option>
             </select>
         </div>
-        
+
         <div class="control-group">
             <h3>Smoothing:</h3>
             <div class="smoothing-controls">
@@ -47,7 +47,7 @@
                 <div class="smoothing-value">Window Size: <span id="smoothing-display">1</span></div>
             </div>
         </div>
-        
+
         <div class="simulation-info" id="simulation-info" style="display: none;">
             <h4>Simulation Statistics:</h4>
             <div class="stats-grid">
@@ -58,7 +58,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="charts-container" id="charts-container" style="display: none;">
         <div class="chart-section">
             <h3>Stop Reason Distribution</h3>
@@ -66,7 +66,7 @@
                 <canvas id="stopReasonChart"></canvas>
             </div>
         </div>
-        
+
         <div class="chart-section">
             <h3>Stop Token Distribution (by Token Type)</h3>
             <div class="chart-container">
@@ -74,7 +74,7 @@
             </div>
         </div>
     </div>
-    
+
     {% else %}
     <div class="no-data">
         <h3>No Simulation Data Found</h3>
@@ -89,10 +89,10 @@
 <script>
     // Store experiment data
     const experimentData = JSON.parse('{{ simulation_experiments|tojson|safe }}');
-    
+
     let stopReasonChart, stopValueChart;
     let currentData = null;
-    
+
     // More distinctive color palette with better visual separation
     const colors = [
         '#e11d48', // Bright red
@@ -116,61 +116,61 @@
         '#0f766e', // Teal
         '#a21caf'  // Fuchsia
     ];
-    
+
     function getSmoothingWindowSize() {
         const slider = document.getElementById('smoothing-slider');
         return parseInt(slider.value);
     }
-    
+
     function updateSmoothingDisplay() {
         const windowSize = getSmoothingWindowSize();
         document.getElementById('smoothing-display').textContent = windowSize;
     }
-    
+
     function applyRollingAverage(dataPoints, windowSize) {
         if (windowSize === 1) {
             return dataPoints; // No smoothing
         }
-        
+
         const smoothedData = [];
         const halfWindow = Math.floor(windowSize / 2);
-        
+
         for (let i = 0; i < dataPoints.length; i++) {
             const start = Math.max(0, i - halfWindow);
             const end = Math.min(dataPoints.length - 1, i + halfWindow);
-            
+
             let sum = 0;
             let count = 0;
-            
+
             for (let j = start; j <= end; j++) {
                 sum += dataPoints[j].y;
                 count++;
             }
-            
+
             smoothedData.push({
                 x: dataPoints[i].x,
                 y: sum / count
             });
         }
-        
+
         return smoothedData;
     }
-    
+
     function resetDropdowns() {
         // Reset experiment dropdown to default
         const experimentSelect = document.getElementById('experiment-select');
         const simulationSelect = document.getElementById('simulation-select');
-        
+
         experimentSelect.value = "";
         simulationSelect.innerHTML = '<option value="">-- Select experiment first --</option>';
         simulationSelect.disabled = true;
-        
+
         // Hide charts and info
         document.getElementById('charts-container').style.display = 'none';
         document.getElementById('simulation-info').style.display = 'none';
         currentData = null;
     }
-    
+
     function initializeCharts() {
         // Stop Reason Chart
         const ctx1 = document.getElementById('stopReasonChart').getContext('2d');
@@ -240,7 +240,7 @@
                 }
             }
         });
-        
+
         // Stop Value Chart
         const ctx2 = document.getElementById('stopValueChart').getContext('2d');
         stopValueChart = new Chart(ctx2, {
@@ -258,7 +258,7 @@
                     legend: {
                         display: true,
                         position: 'bottom',
-                        labels: { 
+                        labels: {
                             font: { family: 'Monaco, monospace', size: 10 },
                             boxWidth: 15,
                             padding: 10,
@@ -325,16 +325,16 @@
             }
         });
     }
-    
+
     function updateSimulationOptions() {
         const experimentSelect = document.getElementById('experiment-select');
         const simulationSelect = document.getElementById('simulation-select');
         const selectedExperiment = experimentSelect.value;
-        
+
         // Clear simulation options
         simulationSelect.innerHTML = '<option value="">-- Select a simulation --</option>';
         simulationSelect.disabled = !selectedExperiment;
-        
+
         if (selectedExperiment) {
             const experiment = experimentData.find(exp => exp.name === selectedExperiment);
             if (experiment) {
@@ -346,82 +346,82 @@
                 });
             }
         }
-        
+
         // Hide charts when experiment changes
         document.getElementById('charts-container').style.display = 'none';
         document.getElementById('simulation-info').style.display = 'none';
         currentData = null;
     }
-    
+
     async function loadSimulationData() {
         const experimentSelect = document.getElementById('experiment-select');
         const simulationSelect = document.getElementById('simulation-select');
         const experiment = experimentSelect.value;
         const simulationId = simulationSelect.value;
-        
+
         if (!experiment || !simulationId) {
             document.getElementById('charts-container').style.display = 'none';
             document.getElementById('simulation-info').style.display = 'none';
             currentData = null;
             return;
         }
-        
+
         try {
             const response = await fetch(`/api/simulation-data?experiment=${experiment}&simulation_id=${simulationId}`);
             const data = await response.json();
-            
+
             if (data.error) {
                 alert(`Error: ${data.error}`);
                 return;
             }
-            
+
             console.log('Simulation data:', data); // Debug log
-            
+
             // Store data for smoothing updates
             currentData = data;
-            
+
             // Update statistics
             document.getElementById('total-simulations').textContent = data.total_simulations.toLocaleString();
             document.getElementById('simulation-info').style.display = 'block';
-            
+
             // Update charts
             updateStopReasonChart(data);
             updateStopValueChart(data);
-            
+
             // Show charts
             document.getElementById('charts-container').style.display = 'block';
-            
+
         } catch (error) {
             console.error('Error loading simulation data:', error);
             alert('Failed to load simulation data');
         }
     }
-    
+
     function updateStopReasonChart(data) {
         // Calculate x-axis range
         const minX = Math.min(...data.start_indices);
         const maxX = Math.max(...data.start_indices);
-        
+
         const windowSize = getSmoothingWindowSize();
-        
+
         console.log('Start indices range:', minX, 'to', maxX); // Debug log
         console.log('Smoothing window size:', windowSize); // Debug log
-        
+
         // Prepare raw data
         const maxStepsData = data.start_indices.map(idx => ({
             x: idx,
             y: data.stop_reason_percentages[idx]?.max_steps_pct || 0
         }));
-        
+
         const stopTokenData = data.start_indices.map(idx => ({
             x: idx,
             y: data.stop_reason_percentages[idx]?.stop_token_pct || 0
         }));
-        
+
         // Apply smoothing
         const smoothedMaxStepsData = applyRollingAverage(maxStepsData, windowSize);
         const smoothedStopTokenData = applyRollingAverage(stopTokenData, windowSize);
-        
+
         const datasets = [
             {
                 label: 'Max Steps %',
@@ -444,16 +444,16 @@
                 pointRadius: 1
             }
         ];
-        
+
         // Update chart options with proper x-axis range
         stopReasonChart.options.scales.x.min = minX;
         stopReasonChart.options.scales.x.max = maxX;
         stopReasonChart.options.scales.x.ticks.stepSize = Math.max(1, Math.round((maxX - minX) / 10));
-        
+
         stopReasonChart.data.datasets = datasets;
         stopReasonChart.update();
     }
-    
+
     function updateStopValueChart(data) {
         if (!data.all_stop_values || data.all_stop_values.length === 0) {
             // No stop token data available
@@ -461,34 +461,34 @@
             stopValueChart.update();
             return;
         }
-        
+
         // Get indices that have stop value data
         const stopValueIndices = Object.keys(data.stop_value_percentages).map(k => parseInt(k));
         const minX = Math.min(...stopValueIndices);
         const maxX = Math.max(...stopValueIndices);
-        
+
         const windowSize = getSmoothingWindowSize();
-        
+
         console.log('Stop value indices range:', minX, 'to', maxX); // Debug log
         console.log('All stop values:', data.all_stop_values); // Debug log
         console.log('Stop value labels:', data.stop_value_labels); // Debug log
-        
+
         const datasets = [];
-        
+
         // Create a dataset for each unique stop value
         data.all_stop_values.forEach((stopValue, index) => {
             const color = colors[index % colors.length];
             const label = data.stop_value_labels[stopValue] || `Token ${stopValue}`;
-            
+
             // Prepare raw data
             const rawData = stopValueIndices.map(idx => ({
                 x: idx,
                 y: data.stop_value_percentages[idx][stopValue] || 0
             }));
-            
+
             // Apply smoothing
             const smoothedData = applyRollingAverage(rawData, windowSize);
-            
+
             const dataset = {
                 label: label,
                 data: smoothedData,
@@ -499,19 +499,19 @@
                 tension: 0.1,
                 pointRadius: 1
             };
-            
+
             datasets.push(dataset);
         });
-        
+
         // Update chart options with proper x-axis range
         stopValueChart.options.scales.x.min = minX;
         stopValueChart.options.scales.x.max = maxX;
         stopValueChart.options.scales.x.ticks.stepSize = Math.max(1, Math.round((maxX - minX) / 10));
-        
+
         stopValueChart.data.datasets = datasets;
         stopValueChart.update();
     }
-    
+
     function updateSmoothing() {
         updateSmoothingDisplay();
         if (currentData) {
@@ -519,21 +519,21 @@
             updateStopValueChart(currentData);
         }
     }
-    
+
     // Initialize everything when page loads
     document.addEventListener('DOMContentLoaded', function() {
         initializeCharts();
         updateSmoothingDisplay();
         resetDropdowns(); // Reset dropdowns on page load
-        
+
         // Add event listeners
         document.getElementById('experiment-select').addEventListener('change', updateSimulationOptions);
         document.getElementById('simulation-select').addEventListener('change', loadSimulationData);
-        
+
         // Update smoothing display while dragging but only update charts on release
         document.getElementById('smoothing-slider').addEventListener('input', updateSmoothingDisplay);
         document.getElementById('smoothing-slider').addEventListener('change', updateSmoothing);
     });
 </script>
 {% endif %}
-{% endblock %} 
+{% endblock %}

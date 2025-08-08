@@ -1,16 +1,24 @@
-import yaml
+import logging
 import os
-import shutil   
+import shutil
+import pandas as pd
+import torch
+import yaml
 from src.data.dataloader import get_dataloader
 from src.models.utils import load_model
-import torch
 from src.training.train import train
-import pandas as pd
-import logging
 
-def create_logger(experiment_dir: str, experiment_name: str):
+
+def create_logger(experiment_dir: str, experiment_name: str) -> logging.Logger:
     """
     Creates a logger for an experiment.
+
+    Args:
+        experiment_dir (str): The directory to save the log file.
+        experiment_name (str): The name of the experiment.
+
+    Returns:
+        logger (logging.Logger): The logger for the experiment.
     """
     logger = logging.getLogger(experiment_name)
     logger.setLevel(logging.INFO)
@@ -26,13 +34,14 @@ def create_logger(experiment_dir: str, experiment_name: str):
     logger.addHandler(console_handler)
 
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 
     return logger
 
-def run_experiment(config_path: str, experiment_name: str):
+
+def run_experiment(config_path: str, experiment_name: str) -> None:
     """
     Runs an experiment with a given config and experiment name.
 
@@ -42,7 +51,7 @@ def run_experiment(config_path: str, experiment_name: str):
 
     Experiment results are saved to src/experiments/results/{experiment_name}.
     """
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     # Validate config before running experiment
@@ -53,7 +62,9 @@ def run_experiment(config_path: str, experiment_name: str):
 
     # check if experiments directory exists, if so ask user if they want to overwrite
     if os.path.exists(experiment_dir):
-        overwrite = input(f"Experiment directory {experiment_dir} already exists. Overwrite? (y/n): ")
+        overwrite = input(
+            f"Experiment directory {experiment_dir} already exists. Overwrite? (y/n): "
+        )
         if overwrite != "y":
             print("Exiting...")
             return
@@ -76,107 +87,126 @@ def run_experiment(config_path: str, experiment_name: str):
         yaml.dump(config, f)
 
     # save the vocab to the experiment directory
-    vocab_df = pd.read_csv(config['data']['vocab_path'])
+    vocab_df = pd.read_csv(config["data"]["vocab_path"])
     vocab_df.to_csv(os.path.join(experiment_dir, "vocab.csv"), index=False)
 
     # Create dataloaders
     train_dataloader = get_dataloader(
-        config['data']['train_dataset_dir'], 
-        config['data']['batch_size'], 
-        config['data']['shuffle'],
-        config['data']['sequence_length'],
+        config["data"]["train_dataset_dir"],
+        config["data"]["batch_size"],
+        config["data"]["shuffle"],
+        config["data"]["sequence_length"],
         mode="train",
-        logger=logger
+        logger=logger,
     )
     val_dataloader = get_dataloader(
-        config['data']['val_dataset_dir'], 
-        config['data']['batch_size'], 
-        config['data']['shuffle'],
-        config['data']['sequence_length'],
+        config["data"]["val_dataset_dir"],
+        config["data"]["batch_size"],
+        config["data"]["shuffle"],
+        config["data"]["sequence_length"],
         mode="eval",
-        logger=logger
+        logger=logger,
     )
 
     # Load model
-    model = load_model(config['model'])
+    model = load_model(config["model"])
 
     # Create loss function
-    if config['loss_function']['type'] == "cross_entropy":
+    if config["loss_function"]["type"] == "cross_entropy":
         loss_function = torch.nn.CrossEntropyLoss()
     else:
         raise ValueError(f"Loss function type {config['loss_function']['type']} not supported")
 
     # Create optimiser
-    if config['optimiser']['type'] == "adam":
-        optimiser = torch.optim.Adam(model.parameters(), lr=config['optimiser']['lr'])
+    if config["optimiser"]["type"] == "adam":
+        optimiser = torch.optim.Adam(model.parameters(), lr=config["optimiser"]["lr"])
     else:
         raise ValueError(f"Optimiser type {config['optimiser']['type']} not supported")
-    
+
     # Run training
     train(
-        model=model, 
-        experiment_dir=experiment_dir, 
-        train_dataloader=train_dataloader, 
-        val_dataloader=val_dataloader, 
-        optimiser=optimiser, 
-        loss_function=loss_function, 
-        device=config['training']['device'],
-        epochs=config['training']['epochs'],
-        logger=logger
+        model=model,
+        experiment_dir=experiment_dir,
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
+        optimiser=optimiser,
+        loss_function=loss_function,
+        device=config["training"]["device"],
+        epochs=config["training"]["epochs"],
+        logger=logger,
     )
 
 
-def validate_config(config: dict):
-    """Validate that all required fields exist in the config."""
+def validate_config(config: dict) -> None:
+    """
+    Validate that all required fields exist in the config.
+
+    Args:
+        config (dict): The config to validate.
+    """
     required_fields = {
-        'name': str,
-        'model': dict,
-        'optimiser': dict,
-        'loss_function': dict,
-        'training': dict,
-        'data': dict
+        "name": str,
+        "model": dict,
+        "optimiser": dict,
+        "loss_function": dict,
+        "training": dict,
+        "data": dict,
     }
-    
+
     # Check top-level required fields
     for field, expected_type in required_fields.items():
         if field not in config:
             raise ValueError(f"Missing required field: '{field}'")
         if not isinstance(config[field], expected_type):
             raise ValueError(f"Field '{field}' must be of type {expected_type.__name__}")
-    
+
     # Validate model section
-    model_required = ['type', 'vocab_size', 'model_dim', 'n_layers', 'dropout', 'n_heads', 'context_length']
+    model_required = [
+        "type",
+        "vocab_size",
+        "model_dim",
+        "n_layers",
+        "dropout",
+        "n_heads",
+        "context_length",
+    ]
     for field in model_required:
-        if field not in config['model']:
+        if field not in config["model"]:
             raise ValueError(f"Missing required field in model: '{field}'")
-    
+
     # Validate optimiser section
-    optimiser_required = ['type', 'lr']
+    optimiser_required = ["type", "lr"]
     for field in optimiser_required:
-        if field not in config['optimiser']:
+        if field not in config["optimiser"]:
             raise ValueError(f"Missing required field in optimiser: '{field}'")
-    
+
     # Validate loss_function section
-    if 'type' not in config['loss_function']:
+    if "type" not in config["loss_function"]:
         raise ValueError("Missing required field in loss_function: 'type'")
-    
+
     # Validate training section
-    training_required = ['epochs', 'device']
+    training_required = ["epochs", "device"]
     for field in training_required:
-        if field not in config['training']:
+        if field not in config["training"]:
             raise ValueError(f"Missing required field in training: '{field}'")
-    
+
     # Validate data section
-    data_required = ['train_dataset_dir', 'val_dataset_dir', 'sequence_length', 'batch_size', 'shuffle']
+    data_required = [
+        "train_dataset_dir",
+        "val_dataset_dir",
+        "sequence_length",
+        "batch_size",
+        "shuffle",
+    ]
     for field in data_required:
-        if field not in config['data']:
+        if field not in config["data"]:
             raise ValueError(f"Missing required field in data: '{field}'")
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Run an experiment")
     parser.add_argument("--config_name", type=str, required=True)
     parser.add_argument("--experiment_name", type=str, required=True)
     args = parser.parse_args()
