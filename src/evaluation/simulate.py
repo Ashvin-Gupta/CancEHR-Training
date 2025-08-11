@@ -99,9 +99,6 @@ def simulate_subject(
         # Write results
         results_df = pd.DataFrame(all_simulation_results)
         results_df.to_csv(os.path.join(save_dir, "simulation_results.csv"), index=False)
-        print(
-            f"Saved results for start token index {start_token_index} to {os.path.join(save_dir, 'simulation_results.csv')}"
-        )
 
 
 def simulate_batch(
@@ -266,8 +263,10 @@ if __name__ == "__main__":
         print(f"Experiment directory {experiment_dir} does not exist")
         exit()
 
+    vocab_path = os.path.join(experiment_dir, "vocab.csv")
+
     # Create eval dataset
-    eval_dataset = NightingaleEvaluationDataset(args.dataset_dir)
+    eval_dataset = NightingaleEvaluationDataset(args.dataset_dir, vocab_path)
 
     # Get subject data
     try:

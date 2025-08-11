@@ -142,7 +142,7 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
         dataset_dir (str): The directory containing the pickled tokenized data.
     """
 
-    def __init__(self, dataset_dir: str, logger: Logger = None) -> None:
+    def __init__(self, dataset_dir: str, vocab_path: str, logger: Logger = None) -> None:
         self.dataset_dir = dataset_dir
         self.logger = logger
 
@@ -154,7 +154,7 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
         }
 
         # Load vocab
-        self.vocab = pd.read_csv(f"{dataset_dir}/vocab.csv", index_col=False)
+        self.vocab = pd.read_csv(vocab_path, index_col=False)
 
     def __load_data_from_dir__(self, dataset_dir: str) -> list:
         """
