@@ -119,7 +119,17 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
 
     # Create optimiser
     if config["optimiser"]["type"] == "adam":
-        optimiser = torch.optim.Adam(model.parameters(), lr=config["optimiser"]["lr"])
+        optimiser = torch.optim.Adam(
+            model.parameters(),
+            lr=config["optimiser"]["lr"],
+            weight_decay=config["optimiser"].get("weight_decay", None),
+        )
+    elif config["optimiser"]["type"] == "adamw":
+        optimiser = torch.optim.AdamW(
+            model.parameters(),
+            lr=config["optimiser"]["lr"],
+            weight_decay=config["optimiser"].get("weight_decay", None),
+        )
     else:
         raise ValueError(f"Optimiser type {config['optimiser']['type']} not supported")
 
