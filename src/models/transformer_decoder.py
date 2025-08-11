@@ -42,28 +42,9 @@ class TransformerDecoder(torch.nn.Module):
         # Create the transformer decoder layers
         # input layer
         self.layers = torch.nn.ModuleList(
-            [
-                TransformerDecoderBlock(
-                    d_input=model_dim,
-                    d_hidden=model_dim,
-                    d_output=model_dim,
-                    n_heads=n_heads,
-                    dropout=dropout,
-                )
-            ]
+            [TransformerDecoderBlock(d_model=model_dim, n_heads=n_heads, dropout=dropout)
+            for _ in range(n_layers)]
         )
-
-        # hidden layers
-        for _ in range(n_layers - 1):
-            self.layers.append(
-                TransformerDecoderBlock(
-                    d_input=model_dim,
-                    d_hidden=model_dim,
-                    d_output=model_dim,
-                    n_heads=n_heads,
-                    dropout=dropout,
-                )
-            )
 
         # output projection
         self.linear = torch.nn.Linear(model_dim, vocab_size)
@@ -116,49 +97,36 @@ class TransformerDecoderBlock(torch.nn.Module):
         dim_feedforward (int): The dimension of the feedforward layer.
     """
 
-    def __init__(
-        self, d_input: int, d_hidden: int, d_output: int, n_heads: int, dropout: float = 0.1
-    ):
+    def __init__(self, d_model: int, n_heads: int, dropout: float = 0.1):
         super().__init__()
-        self.multihead_attn = MultiHeadAttention(d_input, d_hidden, n_heads, dropout=dropout)
-
-        # layer norm 1
-        self.norm1 = torch.nn.LayerNorm(d_hidden)
-
-        # feedforward
-        self.feedforward = torch.nn.Sequential(
-            torch.nn.Linear(d_hidden, d_hidden),
-            torch.nn.ReLU(),
-            torch.nn.Linear(d_hidden, d_output),
+        self.ln1 = torch.nn.LayerNorm(d_model)
+        self.attn = MultiHeadAttention(d_model, n_heads, dropout)
+        self.ln2 = torch.nn.LayerNorm(d_model)
+        self.mlp = torch.nn.Sequential(
+            torch.nn.Linear(d_model, 4 * d_model),
+            torch.nn.GELU(),
+            torch.nn.Linear(4 * d_model, d_model),
+            torch.nn.Dropout(dropout),
         )
-
-        # layer norm 2
-        self.norm2 = torch.nn.LayerNorm(d_hidden)
+        self.resid_dropout = torch.nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Forward pass of the transformer decoder block.
+        Forward pass of a single transformer decoder block.
 
         Args:
-            x (torch.Tensor): The input tensor of shape (batch_size, seq_len, d_input).
+            x (torch.Tensor): The input tensor of shape (batch_size, seq_len, d_model).
 
         Returns:
-            y (torch.Tensor): The output tensor of shape (batch_size, seq_len, d_output).
+            x (torch.Tensor): The output tensor of shape (batch_size, seq_len, d_model).
         """
-        # get shape
-        batch_size, seq_len, features = x.shape
+        # pre-LN attention
+        x = x + self.attn(self.ln1(x))
 
-        # self-attention
-        x1 = self.multihead_attn(x)
+        # pre-LN MLP
+        x = x + self.resid_dropout(self.mlp(self.ln2(x)))
 
-        # layer norm 1
-        x2 = self.norm1(x1 + x)
-
-        # feedforward
-        x3 = self.feedforward(x2)
-        y = self.norm2(x3 + x2)
-
-        return y
+        return x
 
 
 class PositionalEncoding(torch.nn.Module):

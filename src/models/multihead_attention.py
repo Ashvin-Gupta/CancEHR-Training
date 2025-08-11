@@ -12,27 +12,22 @@ class MultiHeadAttention(torch.nn.Module):
         dropout (float): The dropout rate.
     """
 
-    def __init__(self, d_input: int, d_output: int, n_heads: int, dropout: float) -> None:
+    def __init__(self, d_model: int, n_heads: int, dropout: float):
         super().__init__()
+        assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+
         self.heads = torch.nn.ModuleList(
-            [AttentionHead(d_input, d_output, dropout) for _ in range(n_heads)]
+            [AttentionHead(d_model, self.d_head, dropout) for _ in range(n_heads)]
         )
-        self.linear = torch.nn.Linear(d_output * n_heads, d_output)
+        self.out_proj = torch.nn.Linear(self.d_head * n_heads, d_model)
+        self.out_dropout = torch.nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # get shape
-        batch_size, seq_len, features = x.shape
-
-        # calculate output for each head
-        outputs = [head(x) for head in self.heads]  # (batch_size, seq_len, d_output)
-
-        # concatenate outputs
-        output = torch.cat(outputs, dim=-1)  # (batch_size, seq_len, d_output * n_heads)
-
-        # pass through linear layer
-        output = self.linear(output)
-
-        return output
+        h = torch.cat([head(x) for head in self.heads], dim=-1)  # (B, T, n_heads*d_head) == (B,T,d_model)
+        h = self.out_proj(h)
+        return self.out_dropout(h)
 
 
 class AttentionHead(torch.nn.Module):
