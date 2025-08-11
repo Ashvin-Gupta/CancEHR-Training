@@ -7,6 +7,7 @@ import yaml
 from src.data.dataloader import get_dataloader
 from src.models.utils import load_model
 from src.training.train import train
+from src.training.utils import build_warmup_cosine_scheduler
 
 
 def create_logger(experiment_dir: str, experiment_name: str) -> logging.Logger:
@@ -131,6 +132,20 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
     else:
         raise ValueError(f"Optimiser type {config['optimiser']['type']} not supported")
 
+    # Create learning rate scheduler if its specified
+    if "scheduler" in config["optimiser"]:
+        if config["optimiser"]["scheduler"]["type"] == "warmup_cosine":
+            lr_scheduler = build_warmup_cosine_scheduler(
+                optimiser,
+                config["training"]["epochs"] * len(train_dataloader),
+                warmup_steps=config["optimiser"]["scheduler"]["warmup_steps"],
+                lr_min_ratio=config["optimiser"]["scheduler"]["lr_min_ratio"],
+            )
+        else:
+            raise ValueError(f"Scheduler type {config['optimiser']['scheduler']['type']} not supported")
+    else:
+        lr_scheduler = None
+
     # Run training
     train(
         model=model,
@@ -141,6 +156,7 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         loss_function=loss_function,
         device=config["training"]["device"],
         epochs=config["training"]["epochs"],
+        lr_scheduler=lr_scheduler,
         logger=logger,
     )
 

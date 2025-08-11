@@ -2,6 +2,7 @@ import os
 from logging import Logger
 import torch
 from tqdm import tqdm
+from src.training.utils import build_warmup_cosine_scheduler
 
 def train(
         model: torch.nn.Module,
@@ -12,6 +13,7 @@ def train(
         loss_function: torch.nn.Module,
         device: torch.device,
         epochs: int = 10,
+        lr_scheduler: torch.optim.lr_scheduler.LambdaLR = None,
         logger: Logger = None,
     ) -> None:
     """
@@ -26,6 +28,7 @@ def train(
         loss_function (torch.nn.Module): The loss function to use for training.
         device (torch.device): The device to train on.
         epochs (int): The number of epochs to train for.
+        reduce_lr_on_plateau (bool): Whether to reduce the learning rate on plateau.
         logger (Logger): The logger to use for training.
 
     Returns:
@@ -63,12 +66,15 @@ def train(
             loss.backward()
             optimiser.step()
 
+            if lr_scheduler is not None:
+                lr_scheduler.step()
+
             train_loss.append(loss.item())
 
             # log every 10% of the way through the epoch
             if idx % (len(train_dataloader) // 10) == 0 and logger is not None:
                 logger.info(
-                    f"  -- Completed training batch {idx} of {len(train_dataloader)} ({idx / len(train_dataloader) * 100:.2f}%) | mean running train loss: {sum(train_loss) / len(train_loss)}"
+                    f"  -- Completed training batch {idx} of {len(train_dataloader)} ({idx / len(train_dataloader) * 100:.2f}%) | mean running train loss: {sum(train_loss) / len(train_loss)} | current lr: {lr_scheduler.get_last_lr()[0]}"
                 )
 
         # evaluate
