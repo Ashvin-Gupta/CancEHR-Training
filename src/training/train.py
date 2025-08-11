@@ -42,6 +42,8 @@ def train(
     with open(loss_log_filepath, "w") as f:
         f.write("epoch,train_loss,val_loss\n")
 
+    model.to(device)
+
     epoch_pb = tqdm(range(epochs), desc="Epochs")
     for epoch in epoch_pb:
         logger.info(f" - Starting epoch {epoch} of {epochs}")
