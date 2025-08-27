@@ -37,3 +37,21 @@ def load_model(model_config: dict) -> torch.nn.Module:
         raise ValueError(f"Model type {model_config['type']} not supported")
 
     return model
+
+def sample_from_distribution(probs: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
+    """
+    Samples an index from a 1D softmax distribution with optional temperature scaling.
+
+    Args:
+        probs (torch.Tensor): A 1D tensor of shape [vocab_size] representing probabilities.
+        temperature (float): Temperature to scale the distribution. Must be > 0.
+
+    Returns:
+        int: The sampled index.
+    """
+    if temperature <= 0:
+        raise ValueError("Temperature must be > 0")
+
+    logits = torch.log(probs + 1e-9) / temperature
+    scaled_probs = torch.nn.functional.softmax(logits, dim=-1)
+    return torch.multinomial(scaled_probs, num_samples=1)
