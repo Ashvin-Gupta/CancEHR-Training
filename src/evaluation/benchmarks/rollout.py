@@ -5,13 +5,15 @@ from src.models.utils import load_model, sample_from_distribution
 import os
 import yaml
 import pandas as pd
+import json
+from datetime import datetime
 
 # Enable TensorFloat32 for better performance on supported GPUs
 torch.set_float32_matmul_precision('high')
 
 def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset, max_steps: int, num_rollouts: int = 1, num_subjects_per_batch: int = 1, temperature: float = 1.0, device: torch.device = torch.device("cpu"), save_dir: str = None):
     """
-    Runs a rollout benchmark on a model and save results to a csv file in the save_dir.
+    Runs a rollout benchmark on a model and saves results in a csv file in the save_dir.
 
     Args:
         model (torch.nn.Module): The model to evaluate.
@@ -34,9 +36,9 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
     end_token_ids = dataset.end_token_ids
     end_token_tensor = torch.tensor(end_token_ids, device=device)
     
-    # Create empty dataframe to store results
+    # Create empty list to store results in long format
     os.makedirs(save_dir, exist_ok=True)
-    result_df = pd.DataFrame()
+    all_results = []
     
     # Convert dataset to list for batching
     dataset_list = list(dataset)
@@ -111,7 +113,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                     # Update the input sequence for next iteration
                     current_tokens[global_idx] = torch.cat([current_tokens[global_idx, 1:], torch.tensor([token], device=device)])
 
-        # Aggregate results by subject
+        # Aggregate results by subject and convert to long format (one row per subject outcome pair)
         for subject_idx in range(current_batch_size):
             x = batch_subjects[subject_idx]
             
@@ -131,50 +133,94 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                 else:
                     outcome_counts["max_steps"] = outcome_counts.get("max_steps", 0) + 1
             
-            # Calculate proportions
-            outcome_proportions = {k: v / num_rollouts for k, v in outcome_counts.items()}
-            
             # Calculate average steps taken
             avg_steps_taken = sum(subject_steps_taken) / num_rollouts
             
-            subject_result = {
-                "subject_id": x["subject_id"].item(),
-                "real_end_token_id": x['end_token'].item(),
-                "real_end_token_str": dataset.vocab[dataset.vocab["token"] == int(x['end_token'].item())]["str"].values[0],
-                "real_end_token_steps": (x['end_token_idx'] - x['start_token_idx']).item(),
-                "num_rollouts": num_rollouts,
-                "num_subjects_per_batch": num_subjects_per_batch,
-                "temperature": temperature,
-                "avg_steps_taken": avg_steps_taken,
-                **{f"prop_{k}": v for k, v in outcome_proportions.items()},
-                **{f"count_{k}": v for k, v in outcome_counts.items()}
-            }
-
-            result_df = pd.concat([result_df, pd.DataFrame([subject_result])], ignore_index=True)
+            # Get subject info
+            subject_id = x["subject_id"].item()
+            real_end_token_str = dataset.vocab[dataset.vocab["token"] == int(x['end_token'].item())]["str"].values[0]
+            real_end_token_steps = (x['end_token_idx'] - x['start_token_idx']).item()
+            
+            # Create one row per outcome (long format)
+            for outcome, count in outcome_counts.items():
+                proportion = count / num_rollouts
+                
+                result_row = {
+                    "subject_id": subject_id,
+                    "real_end_token_str": real_end_token_str,
+                    "real_end_token_steps": real_end_token_steps,
+                    "outcome": outcome,
+                    "count": count,
+                    "proportion": proportion,
+                    "avg_steps_taken": avg_steps_taken
+                }
+                all_results.append(result_row)
     
-        # Save results after each batch
-        result_df.to_csv(os.path.join(save_dir, "rollout_benchmark_results.csv"), index=False)
-
-    return result_df
+        # save dataframe after each batch
+        results_df = pd.DataFrame(all_results)
+        results_path = os.path.join(save_dir, "rollout_results.csv")
+        results_df.to_csv(results_path, index=False)
+    
+    print(f"Saved {len(results_df)} outcome records to {results_path}")
+    print(f"Summary: {len(results_df['subject_id'].unique())} subjects, {len(results_df)} total outcome records")
+    
+    return results_df
 
 if __name__ == "__main__":
 
-    parent_dir = "/home/joshua/data/mimic/mimic_iv/meds/mimic_iv_meds/tokenized_data/ethos_timetokens"
-    dataset_dir = os.path.join(parent_dir, "tuning")
-    vocab_path = os.path.join(parent_dir, "vocab.csv")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment_dir", type=str, required=True)
+    parser.add_argument("--dataset_dir", type=str, required=True)
+    parser.add_argument("--num_rollouts", type=int, default=2)
+    parser.add_argument("--num_subjects_per_batch", type=int, default=128)
+    parser.add_argument("--temperature", type=float, default=1.0)
+    parser.add_argument("--max_steps", type=int, default=2048)
+    parser.add_argument("--device", type=str, default="cuda")
 
-    experiment_dir = "src/experiments/results/transformer_big"
+    args = parser.parse_args()
+
+    experiment_dir = args.experiment_dir
+    dataset_dir = args.dataset_dir
+    vocab_path = os.path.join(experiment_dir, "vocab.csv")
 
     with open(os.path.join(experiment_dir, "config.yaml"), "r") as f:
-        config = yaml.safe_load(f)
+        experiment_config = yaml.safe_load(f)
 
-    model = load_model(config["model"])
+    model = load_model(experiment_config["model"])
 
     start_token_str = "HOSPITAL_ADMISSION//EW EMER.//EMERGENCY ROOM"
     end_token_strs = ["MEDS_DEATH", "TRANSFER_TO//discharge//UNKNOWN", "HOSPITAL_DISCHARGE//HOME", "HOSPITAL_DISCHARGE//UNK"]
 
-    dataset = RolloutEvaluationDataset(dataset_dir, vocab_path, sequence_length=model.context_length, start_token_str=start_token_str, end_token_strs=end_token_strs, logger=None)
+    dataset = RolloutEvaluationDataset(dataset_dir, vocab_path, sequence_length=experiment_config["model"]["context_length"], start_token_str=start_token_str, end_token_strs=end_token_strs, logger=None)
 
     save_dir = os.path.join(experiment_dir, "evaluations/stop_condition_rollout")
 
-    rollout_benchmark(model, dataset, max_steps=2048, num_rollouts=32, num_subjects_per_batch=7, temperature=0.9, device=torch.device("cuda"), save_dir=save_dir)
+    # Create and save config before running benchmark
+    os.makedirs(save_dir, exist_ok=True)
+    
+    benchmark_config = {
+        "experiment_dir": experiment_dir,
+        "timestamp": datetime.now().isoformat(),
+        "parameters": {
+            "num_rollouts": args.num_rollouts,
+            "num_subjects_per_batch": args.num_subjects_per_batch,
+            "temperature": args.temperature,
+            "max_steps": args.max_steps,
+            "device": args.device
+        },
+        "dataset": {
+            "name": "ethos_timetokens",
+            "start_token": start_token_str,
+            "end_tokens": end_token_strs
+        }
+    }
+    
+    config_path = os.path.join(save_dir, "rollout_config.json")
+    with open(config_path, 'w') as f:
+        json.dump(benchmark_config, f, indent=2)
+    
+    print(f"Saved config to {config_path}")
+
+    # Run the benchmark
+    results_df = rollout_benchmark(model, dataset, max_steps=args.max_steps, num_rollouts=args.num_rollouts, num_subjects_per_batch=args.num_subjects_per_batch, temperature=args.temperature, device=torch.device(args.device), save_dir=save_dir)
