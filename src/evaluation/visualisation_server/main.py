@@ -391,6 +391,174 @@ def get_experiments_with_models() -> list[dict]:
     return experiments
 
 
+def get_benchmark_experiments() -> list[dict]:
+    """
+    Get list of experiments that have benchmark results.
+
+    Returns:
+        experiments (list): A list of dictionaries containing experiment and benchmark info.
+    """
+    results_dir = BASE_DIR.parent.parent / "experiments" / "results"
+    experiments = []
+
+    if not results_dir.exists():
+        return experiments
+
+    for experiment_dir in results_dir.iterdir():
+        if experiment_dir.is_dir():
+            config_path = experiment_dir / "config.yaml"
+            evaluations_dir = experiment_dir / "evaluations"
+            
+            if config_path.exists() and evaluations_dir.exists():
+                try:
+                    with open(config_path) as f:
+                        config = yaml.safe_load(f)
+
+                    # Find benchmark directories
+                    benchmarks = []
+                    for benchmark_dir in evaluations_dir.iterdir():
+                        if benchmark_dir.is_dir():
+                            rollout_results = benchmark_dir / "rollout_results.csv"
+                            rollout_config = benchmark_dir / "rollout_config.json"
+                            
+                            if rollout_results.exists() and rollout_config.exists():
+                                benchmarks.append({
+                                    "name": benchmark_dir.name,
+                                    "path": str(benchmark_dir),
+                                    "has_results": True
+                                })
+
+                    if benchmarks:
+                        experiments.append({
+                            "name": experiment_dir.name,
+                            "model_type": config.get("model", {}).get("type", "unknown"),
+                            "benchmarks": benchmarks
+                        })
+                        
+                except Exception as e:
+                    print(f"Error reading experiment {experiment_dir.name}: {e}")
+
+    return experiments
+
+
+def load_benchmark_data(experiment_name: str, benchmark_name: str) -> dict:
+    """
+    Load benchmark data and config for visualization.
+
+    Args:
+        experiment_name (str): Name of the experiment
+        benchmark_name (str): Name of the benchmark
+
+    Returns:
+        dict: Contains data, config, and computed metrics
+    """
+    results_dir = BASE_DIR.parent.parent / "experiments" / "results"
+    benchmark_dir = results_dir / experiment_name / "evaluations" / benchmark_name
+    
+    results_path = benchmark_dir / "rollout_results.csv"
+    config_path = benchmark_dir / "rollout_config.json"
+    
+    if not results_path.exists() or not config_path.exists():
+        return {"error": "Benchmark files not found"}
+    
+    try:
+        # Load data
+        import pandas as pd
+        df = pd.read_csv(results_path)
+        
+        with open(config_path) as f:
+            import json
+            config = json.load(f)
+        
+        # Get predicted outcome for each subject (highest proportion)
+        subject_predictions = df.loc[df.groupby('subject_id')['proportion'].idxmax()]
+        
+        # Calculate accuracy by real end token
+        accuracy_by_token = {}
+        for real_token in subject_predictions['real_end_token_str'].unique():
+            real_token_subjects = subject_predictions[subject_predictions['real_end_token_str'] == real_token]
+            correct = len(real_token_subjects[real_token_subjects['real_end_token_str'] == real_token_subjects['outcome']])
+            total = len(real_token_subjects)
+            accuracy_by_token[real_token] = {
+                "correct": correct,
+                "total": total,
+                "accuracy": correct / total if total > 0 else 0
+            }
+        
+        # Prepare confusion matrix data
+        real_labels = subject_predictions['real_end_token_str'].tolist()
+        predicted_labels = subject_predictions['outcome'].tolist()
+        
+        # Get unique labels for matrix
+        all_labels = sorted(set(real_labels + predicted_labels))
+        
+        # Create confusion matrix using sklearn
+        from sklearn.metrics import confusion_matrix
+        cm = confusion_matrix(real_labels, predicted_labels, labels=all_labels)
+        
+        # Convert to format suitable for frontend table
+        confusion_matrix_data = {
+            "labels": all_labels,
+            "matrix": cm.tolist(),
+            "real_labels": real_labels,
+            "predicted_labels": predicted_labels
+        }
+        
+        # Calculate population distributions
+        total_subjects = len(subject_predictions)
+        
+        # Ground truth distribution
+        ground_truth_counts = subject_predictions['real_end_token_str'].value_counts()
+        ground_truth_distribution = {
+            token: {
+                "count": int(count),
+                "percentage": round((count / total_subjects) * 100, 1)
+            }
+            for token, count in ground_truth_counts.items()
+        }
+        
+        # Predicted distribution
+        predicted_counts = subject_predictions['outcome'].value_counts()
+        predicted_distribution = {
+            token: {
+                "count": int(count),
+                "percentage": round((count / total_subjects) * 100, 1)
+            }
+            for token, count in predicted_counts.items()
+        }
+        
+        # Ensure all tokens are represented in both distributions
+        all_tokens = set(ground_truth_distribution.keys()) | set(predicted_distribution.keys())
+        for token in all_tokens:
+            if token not in ground_truth_distribution:
+                ground_truth_distribution[token] = {"count": 0, "percentage": 0.0}
+            if token not in predicted_distribution:
+                predicted_distribution[token] = {"count": 0, "percentage": 0.0}
+        
+        population_distribution = {
+            "ground_truth": ground_truth_distribution,
+            "predicted": predicted_distribution,
+            "total_subjects": total_subjects,
+            "tokens": sorted(all_tokens)
+        }
+        
+        return {
+            "data": df.to_dict('records'),
+            "config": config,
+            "accuracy_by_token": accuracy_by_token,
+            "confusion_matrix": confusion_matrix_data,
+            "population_distribution": population_distribution,
+            "summary": {
+                "total_subjects": len(df['subject_id'].unique()),
+                "total_outcomes": len(df),
+                "unique_outcomes": df['outcome'].unique().tolist()
+            }
+        }
+        
+    except Exception as e:
+        return {"error": f"Error loading benchmark data: {str(e)}"}
+
+
 class InferenceRequest(BaseModel):
     experiment_name: str
     input_tokens: list[int]
@@ -451,6 +619,20 @@ async def playground(request: Request):
     )
 
 
+@app.get("/benchmarks", response_class=HTMLResponse)
+async def benchmarks(request: Request):
+    """
+    Serve the benchmarks visualization page.
+
+    Args:
+        request (Request): The request object.
+    """
+    experiments = get_benchmark_experiments()
+    return templates.TemplateResponse(
+        "benchmarks.html", {"request": request, "experiments": experiments}
+    )
+
+
 @app.get("/api/experiment-vocab")
 async def get_experiment_vocab(experiment: str):
     """
@@ -477,6 +659,21 @@ async def get_experiment_vocab(experiment: str):
         return {"vocab": vocab_map}
     except Exception as e:
         return {"error": f"Failed to read vocabulary: {str(e)}"}
+
+
+@app.get("/api/benchmark-data")
+async def get_benchmark_data(experiment: str, benchmark: str):
+    """
+    API endpoint to get benchmark data for visualization.
+
+    Args:
+        experiment (str): The name of the experiment
+        benchmark (str): The name of the benchmark
+
+    Returns:
+        dict: Benchmark data with computed metrics for visualization
+    """
+    return load_benchmark_data(experiment, benchmark)
 
 
 @app.post("/api/inference")
