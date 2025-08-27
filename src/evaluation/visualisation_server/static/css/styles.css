@@ -64,7 +64,7 @@ Spacing:
 
   /* Layout */
   --border-radius: 4px;
-  --max-width: 1000px;
+  --max-width: 1500px;
 }
 
 /* Reset */
@@ -708,3 +708,108 @@ body {
 .mb-sm { margin-bottom: var(--space-sm); }
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
+
+/* Experiments table – readability improvements */
+.table-container {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow-x: hidden;
+}
+
+.experiments-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--font-size-sm);
+  table-layout: fixed; /* distribute space to avoid overflow */
+}
+
+/* Column sizing: name and dataset can truncate, others stay compact */
+.experiments-table th:nth-child(1),
+.experiments-table td:nth-child(1) { width: 20%; }
+.experiments-table th:nth-child(2),
+.experiments-table td:nth-child(2) { width: 15%; }
+.experiments-table th:nth-child(3),
+.experiments-table td:nth-child(3) { width: 15%; }
+.experiments-table th:nth-child(4),
+.experiments-table td:nth-child(4) { width: 20%; }
+.experiments-table th:nth-child(5),
+.experiments-table td:nth-child(5) { width: 10%; }
+.experiments-table th:nth-child(6),
+.experiments-table td:nth-child(6) { width: 10%; }
+.experiments-table th:nth-child(7),
+.experiments-table td:nth-child(7) { width: 10%; }
+
+/* Do not truncate Name column */
+.experiments-table td.exp-name { white-space: nowrap; overflow: visible; text-overflow: initial; }
+
+.experiments-table th,
+.experiments-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Truncation helper for long text */
+.truncate {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sort indicators */
+.experiments-table thead th.sorted-asc::after,
+.experiments-table thead th.sorted-desc::after {
+  content: '';
+  display: inline-block;
+  margin-left: 8px;
+  border: 5px solid transparent;
+}
+.experiments-table thead th.sorted-asc::after {
+  border-bottom-color: var(--color-primary);
+}
+.experiments-table thead th.sorted-desc::after {
+  border-top-color: var(--color-primary);
+}
+
+.experiments-table tbody tr:nth-child(odd) {
+  background: #fbfdff;
+}
+
+.experiments-table tbody tr:hover {
+  background: #f3f8ff;
+}
+
+/* Align numeric columns to the right and keep them on one line */
+.experiments-table th:nth-child(5),
+.experiments-table td:nth-child(5),
+.experiments-table th:nth-child(6),
+.experiments-table td:nth-child(6),
+.experiments-table th:nth-child(7),
+.experiments-table td:nth-child(7) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Prevent wrapping for model size and dataset where sensible */
+.model-size { white-space: nowrap; }
+.files-cell { white-space: nowrap; }
+
+/* Make files links easier to scan */
+.files-cell a.table-link { font-weight: 600; }
+.files-cell .muted { margin: 0 6px; color: var(--color-border); }
+
+@media (max-width: 768px) {
+  .experiments-table th:nth-child(4),
+  .experiments-table td:nth-child(4),
+  .experiments-table th:nth-child(5),
+  .experiments-table td:nth-child(5) {
+    display: table-cell; /* keep numeric cols visible now that we removed scroll */
+  }
+}

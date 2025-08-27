@@ -8,6 +8,7 @@ from src.data.dataloader import get_dataloader
 from src.models.utils import load_model
 from src.training.train import train
 from src.training.utils import build_warmup_cosine_scheduler
+from datetime import datetime
 
 
 def create_logger(experiment_dir: str, experiment_name: str) -> logging.Logger:
@@ -84,6 +85,9 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
     logger.info(f"Training on device: {config['training']['device']}")
 
     # Save config to experiment directory
+    config["experiment_metadata"] = {
+        "start_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
     with open(os.path.join(experiment_dir, "config.yaml"), "w") as f:
         yaml.dump(config, f)
 
