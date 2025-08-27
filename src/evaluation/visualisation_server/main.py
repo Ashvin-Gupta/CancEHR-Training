@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from datetime import datetime, timezone
 
 from src.models.utils import load_model
 
@@ -96,13 +97,36 @@ def get_experiment_results() -> list[dict]:
                                             dataset_name = remaining[0]
                                             break
 
-                        # Debug logging
-                        print(
-                            f"Experiment {experiment_dir.name}: train_path={train_path}, val_path={val_path}, dataset_name={dataset_name}"
-                        )
-
                     except Exception as e:
                         print(f"Error extracting dataset name for {experiment_dir.name}: {e}")
+
+                    # Extract optional experiment start timestamp for display and sorting
+                    start_timestamp_display = None
+                    start_timestamp_epoch = None
+                    try:
+                        metadata = config.get("experiment_metadata", {}) or {}
+                        raw_ts = metadata.get("start_timestamp")
+                        if raw_ts is not None:
+                            # Numeric epoch seconds
+                            if isinstance(raw_ts, (int, float)):
+                                start_dt = datetime.fromtimestamp(float(raw_ts), tz=timezone.utc)
+                                start_timestamp_display = start_dt.strftime("%Y-%m-%d %H:%M UTC")
+                                start_timestamp_epoch = int(start_dt.timestamp())
+                            elif isinstance(raw_ts, str):
+                                # Try parse ISO8601; fallback to raw string
+                                try:
+                                    # Handle trailing Z
+                                    iso = raw_ts.rstrip("Z")
+                                    start_dt = datetime.fromisoformat(iso)
+                                    if start_dt.tzinfo is None:
+                                        start_dt = start_dt.replace(tzinfo=timezone.utc)
+                                    start_timestamp_display = start_dt.strftime("%Y-%m-%d %H:%M UTC")
+                                    start_timestamp_epoch = int(start_dt.timestamp())
+                                except Exception:
+                                    start_timestamp_display = raw_ts
+                                    # leave epoch as None
+                    except Exception as e:
+                        print(f"Error parsing start_timestamp for {experiment_dir.name}: {e}")
 
                     experiments.append(
                         {
@@ -114,6 +138,8 @@ def get_experiment_results() -> list[dict]:
                             "dataset_name": dataset_name,
                             "has_loss_log": (experiment_dir / "loss.log").exists(),
                             "has_simulations": (experiment_dir / "simulations").exists(),
+                            "start_timestamp_display": start_timestamp_display,
+                            "start_timestamp_epoch": start_timestamp_epoch,
                         }
                     )
                 except Exception as e:
@@ -471,59 +497,59 @@ async def inference(request: InferenceRequest):
     if not all(p.exists() for p in [config_path, model_path, vocab_path]):
         return {"error": "Required experiment files not found"}
 
-    try:
+    # try:
         # Load config
-        with open(config_path) as f:
-            config = yaml.safe_load(f)
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
 
-        # Load vocabulary
-        vocab_map = {}
-        with open(vocab_path) as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                token_id = int(row["token"])
-                token_str = row["str"]
-                vocab_map[token_id] = token_str
+    # Load vocabulary
+    vocab_map = {}
+    with open(vocab_path) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            token_id = int(row["token"])
+            token_str = row["str"]
+            vocab_map[token_id] = token_str
 
-        # Load model
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model = load_model(config["model"])
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model.to(device)
-        model.eval()
+    # Load model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = load_model(config["model"])
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.to(device)
+    model.eval()
 
-        # Prepare input
-        input_tensor = torch.tensor(request.input_tokens, dtype=torch.long).unsqueeze(0).to(device)
+    # Prepare input
+    input_tensor = torch.tensor(request.input_tokens, dtype=torch.long).unsqueeze(0).to(device)
 
-        # Get predictions
-        with torch.no_grad():
-            logits = model(input_tensor)  # Shape: (1, seq_len, vocab_size)
-            # Get logits for the last token
-            last_token_logits = logits[0, -1, :]  # Shape: (vocab_size,)
+    # Get predictions
+    with torch.no_grad():
+        logits = model(input_tensor)  # Shape: (1, seq_len, vocab_size)
+        # Get logits for the last token
+        last_token_logits = logits[0, -1, :]  # Shape: (vocab_size,)
 
-            # Get top-k predictions
-            top_k_values, top_k_indices = torch.topk(last_token_logits, k=request.top_k, dim=-1)
-            probabilities = torch.softmax(last_token_logits, dim=-1)
-            top_k_probs = probabilities[top_k_indices]
+        # Get top-k predictions
+        top_k_values, top_k_indices = torch.topk(last_token_logits, k=request.top_k, dim=-1)
+        probabilities = torch.softmax(last_token_logits, dim=-1)
+        top_k_probs = probabilities[top_k_indices]
 
-            # Format results
-            predictions = []
-            for i in range(request.top_k):
-                token_id = top_k_indices[i].item()
-                token_str = vocab_map.get(token_id, f"<UNK:{token_id}>")
-                predictions.append(
-                    {
-                        "token_id": token_id,
-                        "token_str": token_str,
-                        "probability": top_k_probs[i].item(),
-                        "logit": top_k_values[i].item(),
-                    }
-                )
+        # Format results
+        predictions = []
+        for i in range(request.top_k):
+            token_id = top_k_indices[i].item()
+            token_str = vocab_map.get(token_id, f"<UNK:{token_id}>")
+            predictions.append(
+                {
+                    "token_id": token_id,
+                    "token_str": token_str,
+                    "probability": top_k_probs[i].item(),
+                    "logit": top_k_values[i].item(),
+                }
+            )
 
-        return {"predictions": predictions, "input_length": len(request.input_tokens)}
+    return {"predictions": predictions, "input_length": len(request.input_tokens)}
 
-    except Exception as e:
-        return {"error": f"Inference failed: {str(e)}"}
+    # except Exception as e:
+    #     return {"error": f"Inference failed: {str(e)}"}
 
 
 @app.get("/api/simulation-data")
@@ -588,4 +614,4 @@ if __name__ == "__main__":
         # Running directly (e.g., python main.py)
         module_path = "main:app"
 
-    uvicorn.run(module_path, host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run(module_path, host="0.0.0.0", port=8000, reload=True)

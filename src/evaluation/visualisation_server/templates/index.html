@@ -14,58 +14,49 @@
     {% if experiments %}
     <h2>Experiment Results ({{ experiments|length }} total)</h2>
 
-    <div class="experiments-grid">
-        {% for experiment in experiments %}
-        <div class="experiment-card">
-            <div class="experiment-header">
-                <h3>{{ experiment.name }}</h3>
-                <span class="model-type">{{ experiment.model_type|upper }}</span>
-            </div>
-
-            <div class="experiment-details">
-                <div class="detail-row">
-                    <span>Model Type:</span>
-                    <span>{{ experiment.model_type|title }}</span>
-                </div>
-
-                {% if experiment.dataset_name %}
-                <div class="detail-row">
-                    <span>Dataset:</span>
-                    <span class="dataset-name">{{ experiment.dataset_name }}</span>
-                </div>
-                {% endif %}
-
-                {% if experiment.sequence_length %}
-                <div class="detail-row">
-                    <span>Sequence Length:</span>
-                    <span>{{ experiment.sequence_length }}</span>
-                </div>
-                {% endif %}
-
-                {% if experiment.model_size_mb %}
-                <div class="detail-row">
-                    <span>Model Size:</span>
-                    <span class="model-size">{{ experiment.model_size_mb }} MB</span>
-                </div>
-                {% endif %}
-
-                {% if experiment.best_val_loss %}
-                <div class="detail-row">
-                    <span>Best Val Loss:</span>
-                    <span class="val-loss">{{ "%.4f"|format(experiment.best_val_loss) }}</span>
-                </div>
-                {% endif %}
-
-                <div class="detail-row">
-                    <span>Files:</span>
-                    <span>
-                        {% if experiment.has_loss_log %}📊 Loss Log{% endif %}
-                        {% if experiment.has_simulations %}🔬 Simulations{% endif %}
-                    </span>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+    <div class="table-container">
+        <table class="experiments-table" id="experiments-table">
+            <thead>
+                <tr>
+                    <th data-sort="string">Name</th>
+                    <th data-sort="epoch">Start Time</th>
+                    <th data-sort="string">Model</th>
+                    <th data-sort="string">Dataset</th>
+                    <th data-sort="number">Context Length</th>
+                    <th data-sort="number">Model Size (MB)</th>
+                    <th data-sort="number">Best Val Loss</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for experiment in experiments %}
+                <tr>
+                    <td class="exp-name" title="{{ experiment.name }}">{{ experiment.name }}</td>
+                    <td data-epoch="{{ experiment.start_timestamp_epoch if experiment.start_timestamp_epoch is not none else '' }}">
+                        {% if experiment.start_timestamp_display %}
+                            {{ experiment.start_timestamp_display }}
+                        {% else %}-{% endif %}
+                    </td>
+                    <td><span class="model-type">{{ experiment.model_type|upper }}</span></td>
+                    <td class="truncate" title="{{ experiment.dataset_name }}">
+                        {% if experiment.dataset_name %}
+                            <span class="dataset-name">{{ experiment.dataset_name }}</span>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td>{% if experiment.sequence_length %}{{ experiment.sequence_length }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if experiment.model_size_mb %}
+                            <span class="model-size">{{ experiment.model_size_mb }}</span>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td>
+                        {% if experiment.best_val_loss %}
+                            <span class="val-loss">{{ "%.4f"|format(experiment.best_val_loss) }}</span>
+                        {% else %}-{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% else %}
     <div class="no-experiments">
@@ -78,4 +69,47 @@
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+<script>
+// Minimal, dependency-free table sort with support for epoch column
+(function() {
+  const table = document.getElementById('experiments-table');
+  if (!table) return;
+  const getCellValue = (row, idx, type) => {
+    const cell = row.children[idx];
+    if (type === 'epoch') {
+      const epoch = cell.getAttribute('data-epoch');
+      return epoch ? parseFloat(epoch) : -Infinity;
+    }
+    if (type === 'number') {
+      const text = (cell.textContent || '').replace(/[^\d.\-]/g, '');
+      const num = parseFloat(text);
+      return isNaN(num) ? -Infinity : num;
+    }
+    return (cell.textContent || '').toLowerCase();
+  };
+
+  const makeComparator = (idx, type, asc) => (a, b) => {
+    const va = getCellValue(a, idx, type);
+    const vb = getCellValue(b, idx, type);
+    if (va < vb) return asc ? -1 : 1;
+    if (va > vb) return asc ? 1 : -1;
+    return 0;
+  };
+
+  table.querySelectorAll('thead th').forEach((th, idx) => {
+    const type = th.getAttribute('data-sort') || 'string';
+    let asc = true;
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const tbody = table.tBodies[0];
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(makeComparator(idx, type, asc));
+      rows.forEach(r => tbody.appendChild(r));
+      asc = !asc;
+      table.querySelectorAll('thead th').forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+      th.classList.add(asc ? 'sorted-asc' : 'sorted-desc');
+    });
+  });
+})();
+</script>
 {% endblock %}
