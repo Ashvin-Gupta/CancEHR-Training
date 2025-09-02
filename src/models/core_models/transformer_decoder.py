@@ -1,11 +1,11 @@
 import math
-
 import torch
+from src.models.blocks.multihead_attention import MultiHeadAttention
+from src.models.base import BaseNightingaleModel
+from src.models.registry import register_model
 
-from src.models.multihead_attention import MultiHeadAttention
-
-
-class TransformerDecoder(torch.nn.Module):
+@register_model("transformer_decoder")
+class TransformerDecoder(BaseNightingaleModel):
     """
     Implementation of a GPT-style transformer decoder (https://arxiv.org/abs/1706.03762)
 

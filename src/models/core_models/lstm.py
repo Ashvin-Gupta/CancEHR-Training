@@ -1,7 +1,9 @@
 import torch
+from src.models.base import BaseNightingaleModel
+from src.models.registry import register_model
 
-
-class LSTM(torch.nn.Module):
+@register_model("lstm")
+class LSTM(BaseNightingaleModel):
     def __init__(
             self,
             vocab_size: int,
@@ -17,19 +19,26 @@ class LSTM(torch.nn.Module):
         )
         self.fc = torch.nn.Linear(hidden_dim, vocab_size)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def required_keys(self) -> set[str]:
+        return {"ehr.input_token_ids"}
+
+    def forward(self, x: dict) -> torch.Tensor:
         """
         Forward pass of the LSTM model.
 
         Args:
-            x (torch.Tensor): The input token sequence of shape (batch_size, sequence_length).
+            x (dict): Input dictionary, with relevant keys:
+                - ehr.input_token_ids (torch.Tensor): The input token sequence of shape (batch_size, sequence_length).
 
         Returns:
             y (torch.Tensor): The output logits of shape (batch_size, sequence_length, vocab_size). The logits are the
                 unnormalized probabilities of the next token in the sequence.
         """
+
+        input_token_ids = x["ehr"]["input_token_ids"]
+
         # embed token sequence
-        embedded = self.embedding(x)
+        embedded = self.embedding(input_token_ids)
 
         # pass through LSTM
         output, (hidden, cell) = self.lstm(embedded)
@@ -49,7 +58,11 @@ if __name__ == "__main__":
     hidden_dim = 100
 
     # random input
-    x = torch.randint(0, vocab_size, (batch_size, sequence_length))
+    x = {
+        "ehr": {
+            "input_token_ids": torch.randint(0, vocab_size, (batch_size, sequence_length))
+        }
+    }
     print(f"Random input: {x.shape}")
 
     # init model and forward pass
