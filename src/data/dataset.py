@@ -2,6 +2,7 @@ import os
 import pickle
 import random
 from logging import Logger
+from datetime import datetime
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -9,17 +10,17 @@ from tqdm import tqdm
 
 class NightingaleTrainingDataset(torch.utils.data.Dataset):
     """
-    Dataset for running training (and validation) of a Nightingale model. This class takes a directory (data_dir) of pickled tokenized data
+    Dataset for running training (and validation) of a Nightingale model. This class takes a directory (dataset_dir) of pickled tokenized data
     produced by the ehr-tokenization pipeline. Each pickle file is loaded and added to self.data if it meets the criteria (defined in __load_data_from_dir__).
 
     Args:
-        data_dir (str): The directory containing the pickled tokenized data.
+        dataset_dir (str): The directory containing the pickled tokenized data.
         mode (str): The mode of the dataset, changes how data is loaded and returned. Must be one of "train", "eval".
         sequence_length (int): The length of the input and target token sequences.
     """
 
     def __init__(
-        self, dataset_dir: str, mode: str, sequence_length: int = 100, logger: Logger = None
+        self, dataset_dir: str, mode: str, sequence_length: int = 100, clinical_notes_dir: str = None, clinical_notes_max_note_count: int = 3, clinical_notes_max_tokens_per_note: int = 256, logger: Logger = None
     ) -> None:
         self.dataset_dir = dataset_dir
         self.sequence_length = sequence_length
@@ -29,10 +30,25 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         if mode not in ["train", "eval"]:
             raise ValueError(f"Invalid mode: {mode}. Must be one of 'train', 'eval'.")
 
-        # Populate self.data
-        self.data = self.__load_data_from_dir__(dataset_dir)
+        # Populate data
+        self.subject_id_to_data_index = {}
+        self.data = self._load_data_from_dir(dataset_dir)
 
-    def __load_data_from_dir__(self, dataset_dir: str) -> list:
+        # store a lookup table of subject_id to data index
+        self.subject_id_to_data_index = {
+            int(subject_id): idx for idx, subject_id in enumerate(data["subject_id"] for data in self.data)
+        }
+
+        # if clinical notes are provided, then load them
+        if clinical_notes_dir is not None:
+            self.using_clinical_notes = True
+            self.clinical_notes_dir = clinical_notes_dir
+            self.clinical_notes_max_note_count = clinical_notes_max_note_count
+            self.clinical_notes_max_tokens_per_note = clinical_notes_max_tokens_per_note
+            self._load_clinical_notes(clinical_notes_dir)
+
+
+    def _load_data_from_dir(self, dataset_dir: str) -> list:
         """
         Loads data from the data directory and populates self.data depending on self.mode.
 
@@ -65,8 +81,11 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                         data.append(
                             {
                                 "subject_id": torch.tensor(subject_data["subject_id"]),
-                                "tokens": torch.tensor(subject_data["tokens"]),
-                                "timestamps": torch.tensor(subject_data["timestamps"]),
+                                "ehr": {
+                                    "token_ids": torch.tensor(subject_data["tokens"]),
+                                    "timestamps": torch.tensor(subject_data["timestamps"]),
+                                },
+                                "clinical_notes": []
                             }
                         )
 
@@ -79,12 +98,15 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                             chunks.append(
                                 {
                                     "subject_id": torch.tensor(subject_data["subject_id"]),
-                                    "tokens": torch.tensor(
-                                        subject_data["tokens"][i : i + self.sequence_length]
-                                    ),
-                                    "timestamps": torch.tensor(
-                                        subject_data["timestamps"][i : i + self.sequence_length]
-                                    ),
+                                    "ehr": {
+                                        "token_ids": torch.tensor(
+                                            subject_data["tokens"][i : i + self.sequence_length]
+                                        ),
+                                        "timestamps": torch.tensor(
+                                            subject_data["timestamps"][i : i + self.sequence_length]
+                                        )
+                                    },
+                                    "clinical_notes": []
                                 }
                             )
 
@@ -95,45 +117,135 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
 
         return data
 
+    def _load_clinical_notes(self, clinical_notes_dir: str) -> None:
+        """
+        Loads clinical notes from the clinical notes directory and populates self.clinical_notes.
+        """
+        file_paths = [
+            os.path.join(clinical_notes_dir, file) for file in os.listdir(clinical_notes_dir) if file.endswith(".pkl")
+        ]
+
+        for file_path in tqdm(file_paths, desc="Loading data"):
+            with open(file_path, "rb") as f:
+                for subject_data in pickle.load(f):
+                    if int(subject_data["subject_id"]) in self.subject_id_to_data_index:
+                        data_index = self.subject_id_to_data_index[int(subject_data["subject_id"])]
+                        self.data[data_index]["clinical_notes"] = []
+                        for note in subject_data["notes"]:
+                            self.data[data_index]["clinical_notes"].append({
+                                "token_ids": torch.tensor(note["token_ids"]),
+                                "timestamp": torch.tensor(datetime.strptime(note["charttime"], "%Y-%m-%d %H:%M:%S").timestamp()), # TODO do this conversion in the tokenization pipeline
+                                "note_id": note["note_id"],
+                            })
+
+        return
+    
+    def _preprocess_clinical_notes(self, clinical_notes: list) -> dict:
+        """
+        Preprocesses the clinical notes to produce a tensor of shape (self.clinical_notes_max_note_count, self.clinical_notes_max_tokens_per_note).
+
+        Args:
+            clinical_notes (list): A list of clinical notes.
+            max_note_count (int): The maximum number of clinical notes to include.
+            max_tokens_per_note (int): The maximum number of tokens to include per clinical note.
+
+        Returns:
+            - token_ids (torch.Tensor): A tensor of shape (max_note_count, max_tokens_per_note) with padded token IDs.
+            - notes_mask (torch.Tensor): A mask of shape (self.clinical_notes_max_note_count) indicating which notes are valid (1) vs padding (0).
+            - tokens_mask (torch.Tensor): A mask of shape (self.clinical_notes_max_note_count, self.clinical_notes_max_tokens_per_note) indicating which tokens are valid (1) vs padding (0).
+        """
+        # Initialize tensors with zeros (padding value)
+        token_ids = torch.zeros(self.clinical_notes_max_note_count, self.clinical_notes_max_tokens_per_note, dtype=torch.long)
+        notes_mask = torch.zeros(self.clinical_notes_max_note_count, dtype=torch.bool)
+        tokens_mask = torch.zeros(self.clinical_notes_max_note_count, self.clinical_notes_max_tokens_per_note, dtype=torch.bool)
+        
+        # Sort clinical notes by timestamp to maintain chronological order
+        clinical_notes_sorted = sorted(clinical_notes, key=lambda x: x["timestamp"])
+        
+        # Process up to max_note_count notes
+        num_notes_to_process = min(len(clinical_notes_sorted), self.clinical_notes_max_note_count)
+        
+        # Process notes in reverse chronological order to ensure that the most recent notes have priority over older notes
+        for i in reversed(range(num_notes_to_process)):
+            note = clinical_notes_sorted[i]
+            note_tokens = note["token_ids"]
+            
+            # Truncate tokens if they exceed max_tokens_per_note
+            num_tokens = min(len(note_tokens), self.clinical_notes_max_tokens_per_note)
+            
+            if num_tokens > 0:
+                # Fill in the token IDs
+                token_ids[i, :num_tokens] = note_tokens[:num_tokens]
+                
+                # Mark this note as valid
+                notes_mask[i] = True
+                
+                # Mark the tokens in this note as valid
+                tokens_mask[i, :num_tokens] = True
+        
+        return token_ids, notes_mask, tokens_mask
+
     def __len__(self) -> int:
         return len(self.data)
 
     def __getitem__(self, idx: int) -> dict:
+        # TODO: Implement a Collator class so padding / truncation is done dynamically in the collate function
         x = self.data[idx]
 
         if self.mode == "train":
             # If this is a training dataset then we randomly sample a start index and construct the input and target token sequences.
 
             # select random start index
-            start_idx = random.randint(0, len(x["tokens"]) - self.sequence_length - 1)
+            start_idx = random.randint(0, len(x["ehr"]["token_ids"]) - self.sequence_length - 1)
 
             # construct input and target token sequences
-            input_tokens = x["tokens"][start_idx : start_idx + self.sequence_length]
-            input_timestamps = x["timestamps"][start_idx : start_idx + self.sequence_length]
+            input_token_ids = x["ehr"]["token_ids"][start_idx : start_idx + self.sequence_length]
+            input_timestamps = x["ehr"]["timestamps"][start_idx : start_idx + self.sequence_length]
 
-            target_tokens = x["tokens"][start_idx + 1 : start_idx + self.sequence_length + 1]
-            target_timestamps = x["timestamps"][
+            target_token_ids = x["ehr"]["token_ids"][start_idx + 1 : start_idx + self.sequence_length + 1]
+            target_timestamps = x["ehr"]["timestamps"][
                 start_idx + 1 : start_idx + self.sequence_length + 1
             ]
 
         elif self.mode == "eval":
             # If this is an evaluation dataset then the sample has been preprocessed to be a chunk of length sequence_length.
             # We can just return the input and target token sequences as they are.
-            input_tokens = x["tokens"][:-1]
-            input_timestamps = x["timestamps"][:-1]
-            target_tokens = x["tokens"][1:]
-            target_timestamps = x["timestamps"][1:]
+            input_token_ids = x["ehr"]["token_ids"][:-1]
+            input_timestamps = x["ehr"]["timestamps"][:-1]
+            target_token_ids = x["ehr"]["token_ids"][1:]
+            target_timestamps = x["ehr"]["timestamps"][1:]
 
-        return {
+        datapoint = {
             "subject_id": x["subject_id"],
-            "input_tokens": input_tokens,
-            "input_timestamps": input_timestamps,
-            "target_tokens": target_tokens,
-            "target_timestamps": target_timestamps,
+            "ehr": {
+                "input_token_ids": input_token_ids,
+                "input_timestamps": input_timestamps,
+                "target_token_ids": target_token_ids,
+                "target_timestamps": target_timestamps,
+            },
         }
+
+        # if clinical notes are being used, then preprocess them
+        if self.using_clinical_notes:
+            # Select and preprocess clinical notes that fall within the a timestamp range (to prevent attending to future notes)
+            # min_timestamp = input_timestamps[0]
+            max_timestamp = input_timestamps[-1]
+            # clinical_notes = [note for note in x["clinical_notes"] if note["timestamp"] >= min_timestamp and note["timestamp"] <= max_timestamp]
+            clinical_notes = [note for note in x["clinical_notes"] if note["timestamp"] <= max_timestamp]
+
+            token_ids, notes_mask, tokens_mask = self._preprocess_clinical_notes(clinical_notes)
+
+            datapoint["clinical_notes"] = {
+                "token_ids": token_ids,
+                "notes_mask": notes_mask,
+                "tokens_mask": tokens_mask,
+            }
+
+        return datapoint
 
 
 class NightingaleEvaluationDataset(torch.utils.data.Dataset):
+    # TODO: Rename this dataset to NightingaleSimulationDataset and move it to its own file
     """
     Dataset for running evaluation of a Nightingale model. This class takes a directory (data_dir) of pickled tokenized data
     produced by the ehr-tokenization pipeline. Each pickle file is loaded and added to self.data if it meets the criteria (defined in __load_data_from_dir__).
@@ -147,7 +259,7 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
         self.logger = logger
 
         # Populate self.data
-        self.data = self.__load_data_from_dir__(dataset_dir)
+        self.data = self._load_data_from_dir(dataset_dir)
         self.subject_id_map = {
             int(subject_id): idx
             for idx, subject_id in enumerate(data["subject_id"] for data in self.data)
@@ -156,7 +268,7 @@ class NightingaleEvaluationDataset(torch.utils.data.Dataset):
         # Load vocab
         self.vocab = pd.read_csv(vocab_path, index_col=False)
 
-    def __load_data_from_dir__(self, dataset_dir: str) -> list:
+    def _load_data_from_dir(self, dataset_dir: str) -> list:
         """
         Loads data from the data directory and populates self.data.
 
@@ -264,6 +376,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    clinical_notes_dir = "/home/joshua/data/mimic/mimic_iv/tokenized_notes"
+
     if not os.path.isdir(args.dataset_dir):
         raise SystemExit(f"Dataset directory not found: {args.dataset_dir}")
 
@@ -271,7 +385,10 @@ if __name__ == "__main__":
         dataset_dir=args.dataset_dir,
         mode="train",
         sequence_length=128,
+        clinical_notes_dir=clinical_notes_dir,
     )
 
-    datapoint = dataset[0]
-    print(datapoint)
+    import numpy as np
+    for datapoint in tqdm(dataset, desc="Counting clinical notes"):
+        print(datapoint)
+        input()
