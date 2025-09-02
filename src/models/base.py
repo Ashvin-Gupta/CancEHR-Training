@@ -24,7 +24,6 @@ class BaseNightingaleModel(torch.nn.Module):
         """
         Validates the model configuration.
         """
-        print('validating config')
         for key in self.required_config_keys():
             if key not in model_config:
                 raise ValueError(f"Missing required config key: {key}")
