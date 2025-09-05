@@ -14,37 +14,59 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
     This dataset is used for running evaluations where you want to see the models ability to predict an end token given a context window.
 
     Args:
-        data_dir (str): The directory containing the pickled tokenized data.
+        dataset_dir (str): The directory containing the pickled tokenized data.
         vocab_path (str): The path to the vocabulary file.
         sequence_length (int): The length of the input and target token sequences.
-        start_token_id (int): The id of the start token.
-        end_token_ids (list[int]): The ids of the end tokens.
-        logger (Logger): The logger to use.
+        start_token_id (int, optional): The id of the start token. Either this or start_token_str must be provided.
+        end_token_ids (list[int], optional): The ids of the end tokens. Either this or end_token_strs must be provided.
+        start_token_str (str, optional): The string representation of the start token. Either this or start_token_id must be provided.
+        end_token_strs (list[str], optional): The string representations of the end tokens. Either this or end_token_ids must be provided.
+        include_patients_without_end_token (bool, optional): Whether to include patients who have no valid end token after the start token.
+            If True, these patients will be included with end_token=-1 and end_token_idx=-1.
+            If False (default), these patients will be excluded from the dataset.
+        logger (Logger, optional): The logger to use for logging dataset statistics and warnings.
     """
 
-    def __init__(self, dataset_dir: str, vocab_path: str, sequence_length: int, start_token_id: int = None, end_token_ids: list[int] = None, start_token_str: str = None, end_token_strs: list[str] = None, logger: Logger = None) -> None:
+    def __init__(self, dataset_dir: str, vocab_path: str, sequence_length: int, start_token_id: int = None, end_token_ids: list[int] = None, start_token_str: str = None, end_token_strs: list[str] = None, include_patients_without_end_token: bool = False, logger: Logger = None) -> None:
         self.dataset_dir = dataset_dir
         self.sequence_length = sequence_length
+        self.include_patients_without_end_token = include_patients_without_end_token
         self.logger = logger
         self.vocab = pd.read_csv(vocab_path) # columns are token, str, count
 
         # set start token
         if start_token_id is not None:
             self.start_token_id = start_token_id
-            self.start_token_str = self.vocab[self.vocab["token"] == start_token_id]["str"].values[0]
+            start_token_matches = self.vocab[self.vocab["token"] == start_token_id]["str"]
+            if len(start_token_matches) == 0:
+                raise ValueError(f"start_token_id {start_token_id} not found in vocab")
+            self.start_token_str = start_token_matches.values[0]
         elif start_token_str is not None:
             self.start_token_str = start_token_str
-            self.start_token_id = self.vocab[self.vocab["str"] == start_token_str]["token"].values[0]
+            start_token_matches = self.vocab[self.vocab["str"] == start_token_str]["token"]
+            if len(start_token_matches) == 0:
+                raise ValueError(f"start_token_str '{start_token_str}' not found in vocab")
+            self.start_token_id = start_token_matches.values[0]
         else:
             raise ValueError("Either start_token_id or start_token_str must be provided")
         
         # set end tokens
         if end_token_ids is not None:
             self.end_token_ids = end_token_ids
-            self.end_token_strs = [self.vocab[self.vocab["token"] == end_token_id]["str"].values[0] for end_token_id in end_token_ids]
+            self.end_token_strs = []
+            for end_token_id in end_token_ids:
+                end_token_matches = self.vocab[self.vocab["token"] == end_token_id]["str"]
+                if len(end_token_matches) == 0:
+                    raise ValueError(f"end_token_id {end_token_id} not found in vocab")
+                self.end_token_strs.append(end_token_matches.values[0])
         elif end_token_strs is not None:
             self.end_token_strs = end_token_strs
-            self.end_token_ids = [self.vocab[self.vocab["str"] == end_token_str]["token"].values[0] for end_token_str in end_token_strs]
+            self.end_token_ids = []
+            for end_token_str in end_token_strs:
+                end_token_matches = self.vocab[self.vocab["str"] == end_token_str]["token"]
+                if len(end_token_matches) == 0:
+                    raise ValueError(f"end_token_str '{end_token_str}' not found in vocab")
+                self.end_token_ids.append(end_token_matches.values[0])
         else:
             raise ValueError("Either end_token_ids or end_token_strs must be provided")
 
@@ -62,6 +84,12 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
         """
 
         data = []
+        
+        # Statistics for logging
+        total_patients = 0
+        patients_with_valid_rollout = 0
+        patients_without_end_token = 0
+        patients_filtered_other_reasons = 0
 
         # get all the pickle files in the dataset directory
         file_paths = [
@@ -71,10 +99,22 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
         for file_path in tqdm(file_paths, desc="Loading data"):
             with open(file_path, "rb") as f:
                 for subject_data in pickle.load(f):
+                    total_patients += 1
                     
                     # try to generate a rollout datapoint
                     try:
                         input_tokens, input_timestamps, end_token, start_token_idx, end_token_idx = self.__generate_rollout__(subject_data["tokens"], subject_data["timestamps"])
+                        
+                        # Check if patient has a valid end token
+                        if end_token == -1:
+                            patients_without_end_token += 1
+                            if not self.include_patients_without_end_token:
+                                if self.logger is not None:
+                                    self.logger.debug(f"Excluding subject {subject_data['subject_id']} - no valid end token found")
+                                continue
+                        
+                        # Include the patient
+                        patients_with_valid_rollout += 1
                         data.append({
                             "subject_id": torch.tensor(subject_data["subject_id"]),
                             "input_tokens": torch.tensor(input_tokens),
@@ -83,13 +123,27 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
                             "start_token_idx": torch.tensor(start_token_idx),
                             "end_token_idx": torch.tensor(end_token_idx)
                         })
-                    except ValueError:
+                        
+                    except ValueError as e:
+                        patients_filtered_other_reasons += 1
                         if self.logger is not None:
-                            self.logger.warning(f"No rollout datapoint found for subject {subject_data['subject_id']}")
+                            self.logger.debug(f"Excluding subject {subject_data['subject_id']} - {str(e)}")
                         continue
 
+        # Comprehensive logging
         if self.logger is not None:
-            self.logger.info(f"Loaded {len(data)} rollout datapoints from {dataset_dir}")
+            self.logger.info(f"Dataset loading complete from {dataset_dir}")
+            self.logger.info(f"Total patients processed: {total_patients}")
+            self.logger.info(f"Patients included in dataset: {len(data)}")
+            self.logger.info(f"Patients with valid end tokens: {patients_with_valid_rollout - patients_without_end_token}")
+            self.logger.info(f"Patients without end tokens: {patients_without_end_token}")
+            if self.include_patients_without_end_token:
+                self.logger.info(f"  └─ Included (include_patients_without_end_token=True): {patients_without_end_token}")
+            else:
+                self.logger.info(f"  └─ Excluded (include_patients_without_end_token=False): {patients_without_end_token}")
+            self.logger.info(f"Patients filtered (other reasons): {patients_filtered_other_reasons}")
+            self.logger.info(f"Inclusion rate: {len(data)/total_patients*100:.1f}%")
+            
         return data
     
     def __generate_rollout__(self, tokens: list[int], timestamps: list[int]) -> list[int]:
@@ -115,10 +169,10 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
                 self.logger.warning(f"Start token {self.start_token_id} not found in tokens")
             raise ValueError(f"Start token {self.start_token_id} not found in tokens")
         
-        # if there are less than sequence_length tokens before the start token,
+        # if there are less than sequence_length tokens up to and including the start token,
         # raise an error as there is not enough tokens for the context window
         # TODO: in future this should use padding and a mask so that these sample can be used for evaluation
-        if len(tokens[:start_token_idx]) < self.sequence_length:
+        if start_token_idx + 1 < self.sequence_length:
             if self.logger is not None:
                 self.logger.warning(f"Less than {self.sequence_length} tokens before start token")
             raise ValueError(f"Less than {self.sequence_length} tokens before start token")
