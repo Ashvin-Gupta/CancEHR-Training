@@ -419,9 +419,11 @@ def get_benchmark_experiments() -> list[dict]:
                     for benchmark_dir in evaluations_dir.iterdir():
                         if benchmark_dir.is_dir():
                             rollout_results = benchmark_dir / "rollout_results.csv"
+                            # Check for either rollout_config.json or benchmark_config.json
                             rollout_config = benchmark_dir / "rollout_config.json"
+                            benchmark_config = benchmark_dir / "benchmark_config.json"
                             
-                            if rollout_results.exists() and rollout_config.exists():
+                            if rollout_results.exists() and (rollout_config.exists() or benchmark_config.exists()):
                                 benchmarks.append({
                                     "name": benchmark_dir.name,
                                     "path": str(benchmark_dir),
@@ -456,10 +458,19 @@ def load_benchmark_data(experiment_name: str, benchmark_name: str) -> dict:
     benchmark_dir = results_dir / experiment_name / "evaluations" / benchmark_name
     
     results_path = benchmark_dir / "rollout_results.csv"
-    config_path = benchmark_dir / "rollout_config.json"
+    # Check for either config file format
+    rollout_config_path = benchmark_dir / "rollout_config.json"
+    benchmark_config_path = benchmark_dir / "benchmark_config.json"
     
-    if not results_path.exists() or not config_path.exists():
-        return {"error": "Benchmark files not found"}
+    if rollout_config_path.exists():
+        config_path = rollout_config_path
+    elif benchmark_config_path.exists():
+        config_path = benchmark_config_path
+    else:
+        return {"error": "Benchmark config file not found"}
+    
+    if not results_path.exists():
+        return {"error": "Benchmark results file not found"}
     
     try:
         # Load data

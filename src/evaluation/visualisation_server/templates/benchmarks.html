@@ -239,8 +239,18 @@ function displayBenchmarkInfo(config, summary) {
             </div>
             <div class="stat-item">
                 <span class="stat-label">Dataset:</span>
-                <span class="stat-value">${config.dataset.name}</span>
+                <span class="stat-value">${config.dataset.name || 'N/A'}</span>
             </div>
+            ${config.parameters.hours_offset ? `
+            <div class="stat-item">
+                <span class="stat-label">Time Window:</span>
+                <span class="stat-value">${config.parameters.hours_offset}h</span>
+            </div>` : ''}
+            ${config.benchmark_type ? `
+            <div class="stat-item">
+                <span class="stat-label">Benchmark Type:</span>
+                <span class="stat-value">${config.benchmark_type}</span>
+            </div>` : ''}
             <div class="stat-item">
                 <span class="stat-label">Timestamp:</span>
                 <span class="stat-value">${new Date(config.timestamp).toLocaleString()}</span>
