@@ -295,7 +295,10 @@ function createAccuracyChart(accuracyData) {
     accuracyChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: labels.map(label => {
+                // Abbreviate long token names for display
+                return label.length > 20 ? label.substring(0, 17) + '...' : label;
+            }),
             datasets: [{
                 label: 'Accuracy (%)',
                 data: accuracies,
@@ -306,25 +309,42 @@ function createAccuracyChart(accuracyData) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Real End Token',
+                        font: { weight: 'bold' }
+                    },
+                    ticks: {
+                        maxRotation: 0,
+                        minRotation: 0
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     max: 100,
                     title: {
                         display: true,
-                        text: 'Accuracy (%)'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Real End Token'
+                        text: 'Accuracy (%)',
+                        font: { weight: 'bold' }
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
                     }
                 }
             },
             plugins: {
                 tooltip: {
                     callbacks: {
+                        title: function(context) {
+                            // Get full token name from the index
+                            const fullToken = labels[context[0].dataIndex];
+                            return fullToken;
+                        },
                         afterLabel: function(context) {
                             const index = context.dataIndex;
                             return `Sample size: ${counts[index]}`;
