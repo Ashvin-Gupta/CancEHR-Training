@@ -40,8 +40,8 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         }
 
         # if clinical notes are provided, then load them
-        if clinical_notes_dir is not None:
-            self.using_clinical_notes = True
+        self.using_clinical_notes = True if clinical_notes_dir is not None else False
+        if self.using_clinical_notes:
             self.clinical_notes_dir = clinical_notes_dir
             self.clinical_notes_max_note_count = clinical_notes_max_note_count
             self.clinical_notes_max_tokens_per_note = clinical_notes_max_tokens_per_note
