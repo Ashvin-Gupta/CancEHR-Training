@@ -24,13 +24,17 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
         include_patients_without_end_token (bool, optional): Whether to include patients who have no valid end token after the start token.
             If True, these patients will be included with end_token=-1 and end_token_idx=-1.
             If False (default), these patients will be excluded from the dataset.
+        seconds_offset (int, optional): If this is not None then seconds_offset will be used to expand the input window size of the rollout.
+            Tokens within start_token.timestamp + seconds_offset will be included in the input window.
+            Tokens at the start of the context window will be dropped to make room for the seconds_offset tokens, so the length of the input token sequence is sequence_length.
         logger (Logger, optional): The logger to use for logging dataset statistics and warnings.
     """
 
-    def __init__(self, dataset_dir: str, vocab_path: str, sequence_length: int, start_token_id: int = None, end_token_ids: list[int] = None, start_token_str: str = None, end_token_strs: list[str] = None, include_patients_without_end_token: bool = False, logger: Logger = None) -> None:
+    def __init__(self, dataset_dir: str, vocab_path: str, sequence_length: int, start_token_id: int = None, end_token_ids: list[int] = None, start_token_str: str = None, end_token_strs: list[str] = None, include_patients_without_end_token: bool = False, seconds_offset: int = None, logger: Logger = None) -> None:
         self.dataset_dir = dataset_dir
         self.sequence_length = sequence_length
         self.include_patients_without_end_token = include_patients_without_end_token
+        self.seconds_offset = seconds_offset
         self.logger = logger
         self.vocab = pd.read_csv(vocab_path) # columns are token, str, count
 
@@ -70,9 +74,9 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
         else:
             raise ValueError("Either end_token_ids or end_token_strs must be provided")
 
-        self.data = self.__load_data_from_dir__(dataset_dir)
+        self.data = self._load_data_from_dir(dataset_dir)
 
-    def __load_data_from_dir__(self, dataset_dir: str) -> list:
+    def _load_data_from_dir(self, dataset_dir: str) -> list:
         """
         Loads data from the data directory and populates self.data.
 
@@ -103,7 +107,7 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
                     
                     # try to generate a rollout datapoint
                     try:
-                        input_tokens, input_timestamps, end_token, start_token_idx, end_token_idx = self.__generate_rollout__(subject_data["tokens"], subject_data["timestamps"])
+                        input_tokens, input_timestamps, end_token, start_token_idx, end_token_idx = self._generate_rollout(subject_data["tokens"], subject_data["timestamps"])
                         
                         # Check if patient has a valid end token
                         if end_token == -1:
@@ -130,23 +134,16 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
                             self.logger.debug(f"Excluding subject {subject_data['subject_id']} - {str(e)}")
                         continue
 
-        # Comprehensive logging
+        # Log key dataset statistics
         if self.logger is not None:
             self.logger.info(f"Dataset loading complete from {dataset_dir}")
             self.logger.info(f"Total patients processed: {total_patients}")
-            self.logger.info(f"Patients included in dataset: {len(data)}")
-            self.logger.info(f"Patients with valid end tokens: {patients_with_valid_rollout - patients_without_end_token}")
-            self.logger.info(f"Patients without end tokens: {patients_without_end_token}")
-            if self.include_patients_without_end_token:
-                self.logger.info(f"  └─ Included (include_patients_without_end_token=True): {patients_without_end_token}")
-            else:
-                self.logger.info(f"  └─ Excluded (include_patients_without_end_token=False): {patients_without_end_token}")
-            self.logger.info(f"Patients filtered (other reasons): {patients_filtered_other_reasons}")
-            self.logger.info(f"Inclusion rate: {len(data)/total_patients*100:.1f}%")
+            self.logger.info(f"Patients included in dataset: {len(data)} ({len(data)/total_patients*100:.1f}%)")
+            self.logger.info(f"Patients without end tokens: {patients_without_end_token} ({'included' if self.include_patients_without_end_token else 'excluded'})")
             
         return data
     
-    def __generate_rollout__(self, tokens: list[int], timestamps: list[int]) -> list[int]:
+    def _generate_rollout(self, tokens: list[int], timestamps: list[int]) -> list[int]:
         """
         Generates a rollout datapoint that starts from a start token and ends with an end token.
 
@@ -188,10 +185,61 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
             end_token = -1
             end_token_idx = -1
         
-        # create the input sequence so that the context window ends with the start token
-        input_sequence_start_idx = start_token_idx - self.sequence_length + 1
-        input_tokens = tokens[input_sequence_start_idx:start_token_idx + 1]
-        input_timestamps = timestamps[input_sequence_start_idx:start_token_idx + 1]
+        # create the input sequence
+        if self.seconds_offset is None:
+            # Default behavior: context window ends with the start token
+            input_sequence_start_idx = start_token_idx - self.sequence_length + 1
+            input_tokens = tokens[input_sequence_start_idx:start_token_idx + 1]
+            input_timestamps = timestamps[input_sequence_start_idx:start_token_idx + 1]
+        else:
+            # Time-based sequence creation
+            start_timestamp = timestamps[start_token_idx]
+            
+            if self.seconds_offset > 0:
+                # Forward-looking: include tokens after start_token within time window
+                end_timestamp = start_timestamp + self.seconds_offset
+                sequence_end_idx = start_token_idx
+                for i in range(start_token_idx + 1, len(tokens)):
+                    if timestamps[i] <= end_timestamp:
+                        sequence_end_idx = i
+                    else:
+                        break
+                
+                # Get time window tokens
+                time_tokens = tokens[start_token_idx:sequence_end_idx + 1]
+                time_timestamps = timestamps[start_token_idx:sequence_end_idx + 1]
+                
+            else:
+                # Backward-looking: include tokens before start_token within time window
+                lookback_timestamp = start_timestamp + self.seconds_offset  # seconds_offset is negative
+                sequence_start_idx = start_token_idx
+                for i in range(start_token_idx - 1, -1, -1):
+                    if timestamps[i] >= lookback_timestamp:
+                        sequence_start_idx = i
+                    else:
+                        break
+                
+                # Get time window tokens (excluding start_token for backward-looking)
+                time_tokens = tokens[sequence_start_idx:start_token_idx]
+                time_timestamps = timestamps[sequence_start_idx:start_token_idx]
+            
+            # Ensure sequence_length constraint
+            if len(time_tokens) > self.sequence_length:
+                # Keep most recent tokens, warn if start_token dropped
+                if self.seconds_offset > 0 and self.logger:
+                    self.logger.warning(f"Time window exceeds sequence_length, start_token may be dropped")
+                input_tokens = time_tokens[-self.sequence_length:]
+                input_timestamps = time_timestamps[-self.sequence_length:]
+            elif len(time_tokens) < self.sequence_length:
+                # Pad with earlier context
+                tokens_needed = self.sequence_length - len(time_tokens)
+                pad_start_idx = max(0, (sequence_start_idx if self.seconds_offset < 0 else start_token_idx) - tokens_needed)
+                pad_tokens = tokens[pad_start_idx:sequence_start_idx if self.seconds_offset < 0 else start_token_idx]
+                input_tokens = pad_tokens + time_tokens
+                input_timestamps = timestamps[pad_start_idx:sequence_start_idx if self.seconds_offset < 0 else start_token_idx] + time_timestamps
+            else:
+                input_tokens = time_tokens
+                input_timestamps = time_timestamps
 
         return input_tokens, input_timestamps, end_token, start_token_idx, end_token_idx
     

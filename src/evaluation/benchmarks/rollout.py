@@ -138,8 +138,15 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
             
             # Get subject info
             subject_id = x["subject_id"].item()
-            real_end_token_str = dataset.vocab[dataset.vocab["token"] == int(x['end_token'].item())]["str"].values[0]
-            real_end_token_steps = (x['end_token_idx'] - x['start_token_idx']).item()
+            
+            # Handle cases where no end token was found (end_token = -1)
+            end_token_value = int(x['end_token'].item())
+            if end_token_value == -1:
+                real_end_token_str = "NO_END_TOKEN_FOUND"
+                real_end_token_steps = -1  # Indicates no end token found
+            else:
+                real_end_token_str = dataset.vocab[dataset.vocab["token"] == end_token_value]["str"].values[0]
+                real_end_token_steps = (x['end_token_idx'] - x['start_token_idx']).item()
             
             # Create one row per outcome (long format)
             for outcome, count in outcome_counts.items():
@@ -177,6 +184,7 @@ if __name__ == "__main__":
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--max_steps", type=int, default=2048)
     parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--include_patients_without_end_token", action="store_true", help="Include patients without valid end tokens in evaluation")
 
     args = parser.parse_args()
 
@@ -192,7 +200,7 @@ if __name__ == "__main__":
     start_token_str = "HOSPITAL_ADMISSION//EW EMER.//EMERGENCY ROOM"
     end_token_strs = ["MEDS_DEATH", "TRANSFER_TO//discharge//UNKNOWN", "HOSPITAL_DISCHARGE//HOME", "HOSPITAL_DISCHARGE//UNK"]
 
-    dataset = RolloutEvaluationDataset(dataset_dir, vocab_path, sequence_length=experiment_config["model"]["context_length"], start_token_str=start_token_str, end_token_strs=end_token_strs, logger=None)
+    dataset = RolloutEvaluationDataset(dataset_dir, vocab_path, sequence_length=experiment_config["model"]["context_length"], start_token_str=start_token_str, end_token_strs=end_token_strs, include_patients_without_end_token=args.include_patients_without_end_token, logger=None)
 
     save_dir = os.path.join(experiment_dir, "evaluations/stop_condition_rollout")
 
@@ -207,7 +215,8 @@ if __name__ == "__main__":
             "num_subjects_per_batch": args.num_subjects_per_batch,
             "temperature": args.temperature,
             "max_steps": args.max_steps,
-            "device": args.device
+            "device": args.device,
+            "include_patients_without_end_token": args.include_patients_without_end_token
         },
         "dataset": {
             "name": "ethos_timetokens",
