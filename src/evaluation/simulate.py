@@ -3,25 +3,7 @@ import pandas as pd
 import torch
 import yaml
 from tqdm import tqdm
-from src.models.utils import load_model
-
-def sample_from_distribution(probs: torch.Tensor, temperature: float = 1.0) -> int:
-    """
-    Samples an index from a 1D softmax distribution with optional temperature scaling.
-
-    Args:
-        probs (torch.Tensor): A 1D tensor of shape [vocab_size] representing probabilities.
-        temperature (float): Temperature to scale the distribution. Must be > 0.
-
-    Returns:
-        int: The sampled index.
-    """
-    if temperature <= 0:
-        raise ValueError("Temperature must be > 0")
-
-    logits = torch.log(probs + 1e-9) / temperature
-    scaled_probs = torch.nn.functional.softmax(logits, dim=-1)
-    return torch.multinomial(scaled_probs, num_samples=1).item()
+from src.models.utils import load_model, sample_from_distribution
 
 
 def simulate_subject(
@@ -33,6 +15,7 @@ def simulate_subject(
         max_steps: int = 2048,
         device: torch.device = torch.device("cpu"),
         batch_size: int = None,
+        temperature: float = 1.0,
     ) -> None:
     """
     Simulates a subject's data using a trained model with batched processing.
@@ -46,6 +29,7 @@ def simulate_subject(
         max_steps (int): Maximum steps per simulation.
         device (torch.device): The device to run the model on.
         batch_size (int): Number of simulations to batch together. If None, uses simulations_per_step.
+        temperature (float): Temperature for sampling. Higher values make sampling more random.
     """
     # load config
     with open(os.path.join(experiment_dir, "config.yaml")) as f:
@@ -93,6 +77,7 @@ def simulate_subject(
                 stop_tokens_indices=stop_tokens_indices,
                 model=model,
                 device=device,
+                temperature=temperature,
             )
             all_simulation_results.extend(batch_results)
 
@@ -111,6 +96,7 @@ def simulate_batch(
         stop_tokens_indices: torch.Tensor,
         model: torch.nn.Module,
         device: torch.device,
+        temperature: float = 1.0,
     ) -> list[dict]:
     """
     Simulate a batch of sequences in parallel.
@@ -125,6 +111,7 @@ def simulate_batch(
         stop_tokens_indices (torch.Tensor): The indices of the stop tokens.
         model (torch.nn.Module): The model to simulate.
         device (torch.device): The device to run the model on.
+        temperature (float): Temperature for sampling. Higher values make sampling more random.
 
     Returns:
         list[dict]: A list of dictionaries containing the simulation results for each sequence.
@@ -185,7 +172,7 @@ def simulate_batch(
             next_token_distributions = torch.softmax(last_token_logits, dim=-1)
 
             # Sample next tokens for all active sequences
-            next_tokens = torch.multinomial(next_token_distributions, num_samples=1).squeeze(-1)
+            next_tokens = sample_from_distribution(next_token_distributions, temperature=temperature)
 
             # Update sequences and check for stop conditions
             for i, global_idx in enumerate(active_indices):
@@ -244,6 +231,12 @@ if __name__ == "__main__":
         default=10,
         help="Total number of simulations per starting position",
     )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Temperature for sampling. Higher values make sampling more random.",
+    )
     args = parser.parse_args()
 
     # Set device
@@ -289,4 +282,5 @@ if __name__ == "__main__":
         simulations_per_step=args.simulations_per_step,
         device=device,
         batch_size=args.batch_size,
+        temperature=args.temperature,
     )
