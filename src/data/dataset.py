@@ -17,6 +17,9 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         dataset_dir (str): The directory containing the pickled tokenized data.
         mode (str): The mode of the dataset, changes how data is loaded and returned. Must be one of "train", "eval".
         sequence_length (int): The length of the input and target token sequences.
+        clinical_notes_dir (str): The directory containing the pickled tokenized clinical notes.
+        clinical_notes_max_note_count (int): The maximum number of clinical notes to include.
+        clinical_notes_max_tokens_per_note (int): The maximum number of tokens to include per clinical note.
     """
 
     def __init__(
