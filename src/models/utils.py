@@ -2,6 +2,7 @@ import torch
 from src.models.core_models.lstm import LSTM
 from src.models.core_models.transformer_decoder import TransformerDecoder
 from src.models.note_models.lstm_note import LSTMNote
+from src.models.core_models.gpt2 import GPT2
 
 
 def load_model(model_config: dict) -> torch.nn.Module:
@@ -21,6 +22,10 @@ def load_model(model_config: dict) -> torch.nn.Module:
     # Transformer Decoder
     elif model_config["type"] == "transformer":
         model = TransformerDecoder(model_config)
+
+    # GPT2
+    elif model_config["type"] == "gpt2":
+        model = GPT2(model_config)
 
     # LSTM with notes
     elif model_config["type"] == "lstm_note":
