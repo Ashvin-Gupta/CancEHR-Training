@@ -102,6 +102,9 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         config["data"]["shuffle"],
         config["data"]["sequence_length"],
         mode="train",
+        clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
+        clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
+        clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
         logger=logger,
     )
     val_dataloader = get_dataloader(
@@ -110,6 +113,9 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         config["data"]["shuffle"],
         config["data"]["sequence_length"],
         mode="eval",
+        clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
+        clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
+        clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
         logger=logger,
     )
 
@@ -187,20 +193,6 @@ def validate_config(config: dict) -> None:
             raise ValueError(f"Missing required field: '{field}'")
         if not isinstance(config[field], expected_type):
             raise ValueError(f"Field '{field}' must be of type {expected_type.__name__}")
-
-    # Validate model section
-    model_required = [
-        "type",
-        "vocab_size",
-        "model_dim",
-        "n_layers",
-        "dropout",
-        "n_heads",
-        "context_length",
-    ]
-    for field in model_required:
-        if field not in config["model"]:
-            raise ValueError(f"Missing required field in model: '{field}'")
 
     # Validate optimiser section
     optimiser_required = ["type", "lr"]

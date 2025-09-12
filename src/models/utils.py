@@ -1,6 +1,7 @@
 import torch
-from src.models.lstm import LSTM
-from src.models.transformer_decoder import TransformerDecoder
+from src.models.core_models.lstm import LSTM
+from src.models.core_models.transformer_decoder import TransformerDecoder
+from src.models.note_models.lstm_note import LSTMNote
 
 
 def load_model(model_config: dict) -> torch.nn.Module:
@@ -15,24 +16,16 @@ def load_model(model_config: dict) -> torch.nn.Module:
     """
     # LSTM
     if model_config["type"] == "lstm":
-        model = LSTM(
-            vocab_size=model_config["vocab_size"],
-            embedding_dim=model_config["embedding_dim"],
-            hidden_dim=model_config["hidden_dim"],
-            n_layers=model_config["n_layers"],
-            dropout=model_config["dropout"],
-        )
+        model = LSTM(model_config)
 
     # Transformer Decoder
     elif model_config["type"] == "transformer":
-        model = TransformerDecoder(
-            vocab_size=model_config["vocab_size"],
-            model_dim=model_config["model_dim"],
-            n_layers=model_config["n_layers"],
-            dropout=model_config["dropout"],
-            n_heads=model_config["n_heads"],
-            context_length=model_config["context_length"],
-        )
+        model = TransformerDecoder(model_config)
+
+    # LSTM with notes
+    elif model_config["type"] == "lstm_note":
+        model = LSTMNote(model_config)
+
     else:
         raise ValueError(f"Model type {model_config['type']} not supported")
 

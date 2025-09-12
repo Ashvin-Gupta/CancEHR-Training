@@ -2,7 +2,7 @@ import os
 from logging import Logger
 import torch
 from tqdm import tqdm
-from src.training.utils import build_warmup_cosine_scheduler
+from src.training.utils import build_warmup_cosine_scheduler, get_nested_value, create_nested_dict
 
 def train(
         model: torch.nn.Module,
@@ -56,12 +56,23 @@ def train(
         # train
         train_pb = tqdm(train_dataloader, desc="Training", leave=False)
         for idx, batch in enumerate(train_pb):
+
+            # create input dictionary
+            flat_input_dict = {}
+            for key in model.required_input_keys():
+                value = get_nested_value(batch, key)
+                flat_input_dict[key] = value.to(device)
+            
+            # convert to nested structure that model expects
+            input_dict = create_nested_dict(flat_input_dict)
+
+            # create target
+            targets = get_nested_value(batch, "ehr.target_token_ids").to(device).view(-1) # (batch_size * sequence_length)
+
+            # forward pass
             optimiser.zero_grad()
-            logits = model(batch["input_tokens"].to(device))  # (batch_size, sequence_length, vocab_size)
+            logits = model(input_dict)  # (batch_size, sequence_length, vocab_size)
             logits = logits.view(-1, logits.shape[-1])  # (batch_size * sequence_length, vocab_size)
-
-            targets = batch["target_tokens"].to(device).view(-1)  # (batch_size * sequence_length)
-
             loss = loss_function(logits, targets)
             loss.backward()
             optimiser.step()
@@ -73,8 +84,9 @@ def train(
 
             # log every 10% of the way through the epoch
             if idx % (len(train_dataloader) // 10) == 0 and logger is not None:
+                last_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else optimiser.param_groups[0]['lr']
                 logger.info(
-                    f"  -- Completed training batch {idx} of {len(train_dataloader)} ({idx / len(train_dataloader) * 100:.2f}%) | mean running train loss: {sum(train_loss) / len(train_loss)} | current lr: {lr_scheduler.get_last_lr()[0]}"
+                    f"  -- Completed training batch {idx} of {len(train_dataloader)} ({idx / len(train_dataloader) * 100:.2f}%) | mean running train loss: {sum(train_loss) / len(train_loss)} | current lr: {last_lr}"
                 )
 
         # evaluate
@@ -84,16 +96,22 @@ def train(
 
             val_pb = tqdm(val_dataloader, desc="Evaluating", leave=False)
             for idx, batch in enumerate(val_pb):
-                logits = model(
-                    batch["input_tokens"].to(device)
-                )  # (batch_size, sequence_length, vocab_size)
-                logits = logits.view(
-                    -1, logits.shape[-1]
-                )  # (batch_size * sequence_length, vocab_size)
 
-                targets = (
-                    batch["target_tokens"].to(device).view(-1)
-                )  # (batch_size * sequence_length)
+                # create input dictionary
+                flat_input_dict = {}
+                for key in model.required_input_keys():
+                    value = get_nested_value(batch, key)
+                    flat_input_dict[key] = value.to(device)
+                
+                # convert to nested structure that model expects
+                input_dict = create_nested_dict(flat_input_dict)
+
+                # create target
+                targets = get_nested_value(batch, "ehr.target_token_ids").to(device).view(-1) # (batch_size * sequence_length)
+
+                # forward pass
+                logits = model(input_dict) # (batch_size, sequence_length, vocab_size)
+                logits = logits.view(-1, logits.shape[-1])  # (batch_size * sequence_length, vocab_size)
                 loss = loss_function(logits, targets)
                 val_loss.append(loss.item())
 

@@ -1,11 +1,11 @@
 import math
-
 import torch
+from src.models.blocks.multihead_attention import MultiHeadAttention
+from src.models.base import BaseNightingaleModel
+from src.models.registry import register_model
 
-from src.models.multihead_attention import MultiHeadAttention
-
-
-class TransformerDecoder(torch.nn.Module):
+@register_model("transformer_decoder")
+class TransformerDecoder(BaseNightingaleModel):
     """
     Implementation of a GPT-style transformer decoder (https://arxiv.org/abs/1706.03762)
 
@@ -19,38 +19,36 @@ class TransformerDecoder(torch.nn.Module):
         context_length (int): The length of the context.
     """
 
-    def __init__(
-            self,
-            vocab_size: int,
-            model_dim: int,
-            n_layers: int = 2,
-            dropout: float = 0.5,
-            n_heads: int = 8,
-            context_length: int = 512,
-        ):
-        super().__init__()
-        self.model_dim = model_dim
-        self.n_layers = n_layers
-        self.context_length = context_length
+    def __init__(self, model_config: dict):
+        super().__init__(model_config)
+        self.model_dim = model_config["model_dim"]
+        self.n_layers = model_config["n_layers"]
+        self.context_length = model_config["context_length"]
 
         # Embedding matrix
-        self.embedding = torch.nn.Embedding(vocab_size, model_dim)
+        self.embedding = torch.nn.Embedding(model_config["vocab_size"], model_config["model_dim"])
 
         # Positional encoding
-        self.pos_encoding = PositionalEncoding(model_dim, dropout, context_length)
+        self.pos_encoding = PositionalEncoding(model_config["model_dim"], model_config["dropout"], model_config["context_length"])
 
         # Create the transformer decoder layers
         # input layer
         self.layers = torch.nn.ModuleList(
-            [TransformerDecoderBlock(d_model=model_dim, n_heads=n_heads, dropout=dropout)
+            [TransformerDecoderBlock(d_model=model_config["model_dim"], n_heads=model_config["n_heads"], dropout=model_config["dropout"])
             for _ in range(n_layers)]
         )
 
         # output projection
-        self.linear = torch.nn.Linear(model_dim, vocab_size)
+        self.linear = torch.nn.Linear(model_config["model_dim"], model_config["vocab_size"])
 
         # Initialize weights using Xavier uniform initialization
         self._init_weights()
+
+    def required_config_keys(self) -> set[str]:
+        return {"vocab_size", "model_dim", "n_layers", "dropout", "n_heads", "context_length"}
+
+    def required_input_keys(self) -> set[str]:
+        return {"ehr.input_token_ids"}
 
     def _init_weights(self) -> None:
         """
@@ -66,23 +64,30 @@ class TransformerDecoder(torch.nn.Module):
         Forward pass of the transformer decoder model.
 
         Args:
-            x (torch.Tensor): The input token sequence of shape (batch_size, sequence_length).
+            x (dict): Input dictionary, with relevant keys:
+                - ehr.input_token_ids (torch.Tensor): The input token sequence of shape (batch_size, sequence_length).
 
         Returns:
             y (torch.Tensor): The output logits of shape (batch_size, sequence_length, vocab_size). The logits are the
                 unnormalized probabilities of the next token in the sequence.
         """
+
+        # validate input
+        self.validate_input(x)
+
+        input_token_ids = x["ehr"]["input_token_ids"] # (batch_size, sequence_length)
+
         # embed token sequence with positional encoding
-        embedded = self.embedding(x)
+        embedded = self.embedding(input_token_ids)
         embedded = self.pos_encoding(embedded)
 
         # pass through transformer decoder layers sequentially
         output = embedded
         for layer in self.layers:
-            output = layer(output)
+            output = layer(output) # (batch_size, sequence_length, model_dim)
 
         # pass through linear layer
-        y = self.linear(output)
+        y = self.linear(output) # (batch_size, sequence_length, vocab_size)
 
         return y
 
@@ -179,29 +184,31 @@ if __name__ == "__main__":
 
     # random input
     rand = torch.randint(0, vocab_size, (batch_size, sequence_length + 1))
-    x = rand[:, :-1]
-    y = rand[:, 1:]
+    x = {
+        "ehr": {
+            "input_token_ids": rand[:, :-1]
+        }
+    }
+    target = {
+        "ehr": {
+            "input_token_ids": rand[:, 1:]
+        }
+    }
 
-    print(x)
-    print(y)
-
-    print(f"Random input: {x.shape}")
+    model_config = {
+        "vocab_size": vocab_size,
+        "model_dim": model_dim,
+        "n_layers": n_layers,
+        "dropout": dropout,
+        "n_heads": num_heads,
+        "context_length": sequence_length,
+    }
 
     # init model and forward pass
-    model = TransformerDecoder(
-        vocab_size=vocab_size,
-        model_dim=model_dim,
-        n_layers=n_layers,
-        dropout=dropout,
-        n_heads=num_heads,
-        context_length=sequence_length,
-    )
+    model = TransformerDecoder(model_config=model_config)
     pred = model(x)
-
-    print(f"Pred shape: {pred.shape}")
-    print(f"Target shape: {y.shape}")
 
     # print loss
     loss_fn = torch.nn.CrossEntropyLoss()
-    loss = loss_fn(pred.view(-1, vocab_size), y.view(-1))
+    loss = loss_fn(pred.view(-1, vocab_size), target["ehr"]["input_token_ids"].view(-1))
     print(f"Loss: {loss}")
