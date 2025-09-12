@@ -48,7 +48,7 @@ class TransformerDecoder(BaseNightingaleModel):
         return {"vocab_size", "model_dim", "n_layers", "dropout", "n_heads", "context_length"}
 
     def required_input_keys(self) -> set[str]:
-        return {"ehr.input_token_ids"}
+        return {"ehr.input_token_ids", "ehr.target_token_ids"}
 
     def _init_weights(self) -> None:
         """
@@ -59,7 +59,7 @@ class TransformerDecoder(BaseNightingaleModel):
             if p.dim() > 1:
                 torch.nn.init.xavier_uniform_(p)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: dict) -> torch.Tensor:
         """
         Forward pass of the transformer decoder model.
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     }
     target = {
         "ehr": {
-            "input_token_ids": rand[:, 1:]
+            "target_token_ids": rand[:, 1:]
         }
     }
 
