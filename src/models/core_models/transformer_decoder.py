@@ -35,7 +35,7 @@ class TransformerDecoder(BaseNightingaleModel):
         # input layer
         self.layers = torch.nn.ModuleList(
             [TransformerDecoderBlock(d_model=model_config["model_dim"], n_heads=model_config["n_heads"], dropout=model_config["dropout"])
-            for _ in range(n_layers)]
+            for _ in range(self.n_layers)]
         )
 
         # output projection
@@ -48,7 +48,7 @@ class TransformerDecoder(BaseNightingaleModel):
         return {"vocab_size", "model_dim", "n_layers", "dropout", "n_heads", "context_length"}
 
     def required_input_keys(self) -> set[str]:
-        return {"ehr.input_token_ids", "ehr.target_token_ids"}
+        return {"ehr.input_token_ids"}
 
     def _init_weights(self) -> None:
         """
