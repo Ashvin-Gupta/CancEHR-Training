@@ -168,7 +168,7 @@ class GPT2(BaseNightingaleModel):
         return {"vocab_size", "model_dim", "n_layers", "dropout", "n_heads", "context_length"}
 
     def required_input_keys(self) -> set[str]:
-        return {"ehr.input_token_ids", "ehr.target_token_ids"}
+        return {"ehr.input_token_ids"}
 
     def get_num_params(self, non_embedding=True):
         """
