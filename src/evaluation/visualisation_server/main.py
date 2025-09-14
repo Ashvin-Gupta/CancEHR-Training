@@ -727,11 +727,18 @@ async def inference(request: InferenceRequest):
     model.eval()
 
     # Prepare input
-    input_tensor = torch.tensor(request.input_tokens, dtype=torch.long).unsqueeze(0).to(device)
+    ehr_token_ids = torch.tensor(request.input_tokens, dtype=torch.long).unsqueeze(0).to(device)
 
     # Get predictions
     with torch.no_grad():
-        logits = model(input_tensor)  # Shape: (1, seq_len, vocab_size)
+        
+        input = {
+            "ehr": {
+                "input_token_ids": ehr_token_ids
+            }
+        }
+
+        logits = model(input)  # Shape: (1, seq_len, vocab_size)
         # Get logits for the last token
         last_token_logits = logits[0, -1, :]  # Shape: (vocab_size,)
 
