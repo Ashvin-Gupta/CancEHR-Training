@@ -90,7 +90,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                     break
                     
                 active_tokens = current_tokens[active_indices]
-                output = model(active_tokens)
+                output = model({'ehr': {'input_token_ids': active_tokens}})
                 
                 # Sample next tokens with temperature
                 logits = output[:, -1]  # Shape: [active_batch_size, vocab_size]
