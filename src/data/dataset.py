@@ -17,17 +17,19 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         dataset_dir (str): The directory containing the pickled tokenized data.
         mode (str): The mode of the dataset, changes how data is loaded and returned. Must be one of "train", "eval".
         sequence_length (int): The length of the input and target token sequences.
+        insert_static_demographic_tokens (bool): Whether to make the first tokens of each datapoint the static demographic tokens.
         clinical_notes_dir (str): The directory containing the pickled tokenized clinical notes.
         clinical_notes_max_note_count (int): The maximum number of clinical notes to include.
         clinical_notes_max_tokens_per_note (int): The maximum number of tokens to include per clinical note.
     """
 
     def __init__(
-        self, dataset_dir: str, mode: str, sequence_length: int = 100, clinical_notes_dir: str = None, clinical_notes_max_note_count: int = 3, clinical_notes_max_tokens_per_note: int = 256, logger: Logger = None
+        self, dataset_dir: str, mode: str, sequence_length: int = 100, insert_static_demographic_tokens: bool = True, clinical_notes_dir: str = None, clinical_notes_max_note_count: int = 3, clinical_notes_max_tokens_per_note: int = 256, logger: Logger = None
     ) -> None:
         self.dataset_dir = dataset_dir
         self.sequence_length = sequence_length
         self.mode = mode
+        self.insert_static_demographic_tokens = insert_static_demographic_tokens
         self.logger = logger
 
         if mode not in ["train", "eval"]:
@@ -97,16 +99,31 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                     # a deterministic dataset for evaluation, rather than randomly sampling a start index as in training.
                     if self.mode == "eval":
                         chunks = []
-                        for i in range(0, len(subject_data["tokens"]) - self.sequence_length - 1, self.sequence_length):
+                        if self.insert_static_demographic_tokens:
+                            tokens_tensor = torch.tensor(subject_data["tokens"])
+                            timestamps_tensor = torch.tensor(subject_data["timestamps"])
+                            static_demographic_token_ids = tokens_tensor[timestamps_tensor == 0]
+                            static_demographic_token_length = len(static_demographic_token_ids)
+                        else:
+                            static_demographic_token_length = 0
+
+                        # Calculate how many tokens to sample from non-static portion
+                        tokens_to_sample = self.sequence_length - static_demographic_token_length
+                        non_static_length = len(subject_data["tokens"]) - static_demographic_token_length
+                        
+                        # Create chunks by stepping through non-static tokens
+                        for i in range(static_demographic_token_length, 
+                                     static_demographic_token_length + non_static_length - tokens_to_sample, 
+                                     tokens_to_sample):
                             chunks.append(
                                 {
                                     "subject_id": torch.tensor(subject_data["subject_id"]),
                                     "ehr": {
                                         "token_ids": torch.tensor(
-                                            subject_data["tokens"][i : i + self.sequence_length]
+                                            static_demographic_token_ids.tolist() + subject_data["tokens"][i : i + tokens_to_sample]
                                         ),
                                         "timestamps": torch.tensor(
-                                            subject_data["timestamps"][i : i + self.sequence_length]
+                                            [0] * static_demographic_token_length + subject_data["timestamps"][i : i + tokens_to_sample]
                                         )
                                     },
                                     "clinical_notes": []
@@ -199,20 +216,49 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
             # If this is a training dataset then we randomly sample a start index and construct the input and target token sequences.
 
             # select random start index
-            start_idx = random.randint(0, len(x["ehr"]["token_ids"]) - self.sequence_length - 1)
+            if self.insert_static_demographic_tokens:
+                static_demographic_token_ids = x["ehr"]["token_ids"][x["ehr"]["timestamps"] == 0]
+                # We need to sample (sequence_length - len(static_tokens)) tokens from the non-static tokens
+                tokens_to_sample = self.sequence_length - len(static_demographic_token_ids)
+                non_static_tokens_available = len(x["ehr"]["token_ids"]) - len(static_demographic_token_ids)
+                
+                if non_static_tokens_available < tokens_to_sample + 1:  # +1 for target
+                    raise ValueError(f"Not enough non-static tokens: need {tokens_to_sample + 1}, have {non_static_tokens_available}")
+                
+                # Sample from the non-static portion
+                start_idx = random.randint(0, non_static_tokens_available - tokens_to_sample - 1) + len(static_demographic_token_ids)
+            else:
+                available_length = len(x["ehr"]["token_ids"]) - self.sequence_length - 1
+                if available_length < 0:
+                    raise ValueError(f"Sequence too short for training: total_tokens={len(x['ehr']['token_ids'])}, sequence_length={self.sequence_length}")
+                start_idx = random.randint(0, available_length)
 
             # construct input and target token sequences
-            input_token_ids = x["ehr"]["token_ids"][start_idx : start_idx + self.sequence_length]
-            input_timestamps = x["ehr"]["timestamps"][start_idx : start_idx + self.sequence_length]
+            if self.insert_static_demographic_tokens:
+                # Sample the correct number of tokens (sequence_length - static_tokens)
+                tokens_to_sample = self.sequence_length - len(static_demographic_token_ids)
+                input_token_ids = x["ehr"]["token_ids"][start_idx : start_idx + tokens_to_sample]
+                input_timestamps = x["ehr"]["timestamps"][start_idx : start_idx + tokens_to_sample]
 
-            target_token_ids = x["ehr"]["token_ids"][start_idx + 1 : start_idx + self.sequence_length + 1]
-            target_timestamps = x["ehr"]["timestamps"][
-                start_idx + 1 : start_idx + self.sequence_length + 1
-            ]
+                target_token_ids = x["ehr"]["token_ids"][start_idx + 1 : start_idx + tokens_to_sample + 1]
+                target_timestamps = x["ehr"]["timestamps"][start_idx + 1 : start_idx + tokens_to_sample + 1]
+
+                # insert static demographic tokens at the beginning
+                input_token_ids = torch.cat([static_demographic_token_ids, input_token_ids])
+                input_timestamps = torch.cat([torch.zeros_like(static_demographic_token_ids), input_timestamps])
+                target_token_ids = torch.cat([static_demographic_token_ids, target_token_ids])
+                target_timestamps = torch.cat([torch.zeros_like(static_demographic_token_ids), target_timestamps])
+            else:
+                input_token_ids = x["ehr"]["token_ids"][start_idx : start_idx + self.sequence_length]
+                input_timestamps = x["ehr"]["timestamps"][start_idx : start_idx + self.sequence_length]
+
+                target_token_ids = x["ehr"]["token_ids"][start_idx + 1 : start_idx + self.sequence_length + 1]
+                target_timestamps = x["ehr"]["timestamps"][start_idx + 1 : start_idx + self.sequence_length + 1]
 
         elif self.mode == "eval":
             # If this is an evaluation dataset then the sample has been preprocessed to be a chunk of length sequence_length.
             # We can just return the input and target token sequences as they are.
+            # We also dont need to insert static demographic tokens as they are already in the input and target token sequences when they were preprocessed.
             input_token_ids = x["ehr"]["token_ids"][:-1]
             input_timestamps = x["ehr"]["timestamps"][:-1]
             target_token_ids = x["ehr"]["token_ids"][1:]
@@ -384,14 +430,22 @@ if __name__ == "__main__":
     if not os.path.isdir(args.dataset_dir):
         raise SystemExit(f"Dataset directory not found: {args.dataset_dir}")
 
+    vocab_path = os.path.join('/'.join(args.dataset_dir.split("/")[:-1]), "vocab.csv")
+    print(vocab_path)
+    vocab = pd.read_csv(vocab_path, index_col=False)
+    print(vocab.head())
+
     dataset = NightingaleTrainingDataset(
         dataset_dir=args.dataset_dir,
         mode="train",
         sequence_length=128,
-        clinical_notes_dir=clinical_notes_dir,
+        insert_static_demographic_tokens=True,
+        # clinical_notes_dir=clinical_notes_dir,
     )
 
     import numpy as np
-    for datapoint in tqdm(dataset, desc="Counting clinical notes"):
-        print(datapoint)
+    for datapoint in tqdm(dataset):
+        for token_id in datapoint["ehr"]["input_token_ids"]:
+            print(vocab[vocab["token"] == int(token_id)]["str"].values[0], end=" ")
+        print()
         input()
