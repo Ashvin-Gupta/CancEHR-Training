@@ -9,8 +9,6 @@ comm==0.2.3
 debugpy==1.8.16
 decorator==5.2.1
 docker-pycreds==0.4.0
--e git+https://github.com/JoshuaPlacidi/ehr-tokenisation.git@4f74dbae7257252a1f5aaa9d8cfd9a9a3e7714c1#egg=ehr_tokenisation
--e git+https://github.com/Edison9489/Nightingale.git@6a869f8e77eb271c4efa15ed6185bb79385d1adf#egg=ethos&subdirectory=structured-ehr
 executing==2.2.1
 filelock==3.18.0
 fsspec==2025.5.1
