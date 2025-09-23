@@ -102,6 +102,7 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         config["data"]["shuffle"],
         config["data"]["sequence_length"],
         mode="train",
+        insert_static_demographic_tokens=config["data"]["insert_static_demographic_tokens"],
         clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
         clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
         clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
@@ -113,6 +114,7 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         config["data"]["shuffle"],
         config["data"]["sequence_length"],
         mode="eval",
+        insert_static_demographic_tokens=config["data"]["insert_static_demographic_tokens"],
         clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
         clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
         clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
@@ -217,6 +219,7 @@ def validate_config(config: dict) -> None:
         "sequence_length",
         "batch_size",
         "shuffle",
+        "insert_static_demographic_tokens",
     ]
     for field in data_required:
         if field not in config["data"]:

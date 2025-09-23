@@ -105,6 +105,7 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                             static_demographic_token_ids = tokens_tensor[timestamps_tensor == 0]
                             static_demographic_token_length = len(static_demographic_token_ids)
                         else:
+                            static_demographic_token_ids = torch.tensor([])
                             static_demographic_token_length = 0
 
                         # Calculate how many tokens to sample from non-static portion

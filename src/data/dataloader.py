@@ -11,6 +11,7 @@ def get_dataloader(
         sequence_length: int = 100,
         mode: Literal["train", "eval"] = "train",
         num_workers: int = 4,
+        insert_static_demographic_tokens: bool = True,
         clinical_notes_dir: str = None,
         clinical_notes_max_note_count: int = None,
         clinical_notes_max_tokens_per_note: int = None,
@@ -34,7 +35,7 @@ def get_dataloader(
     if mode not in ["train", "eval"]:
         raise ValueError(f"Invalid mode: {mode}. Must be one of 'train', 'eval'.")
 
-    dataset = NightingaleTrainingDataset(dataset_dir, mode, sequence_length, clinical_notes_dir, clinical_notes_max_note_count, clinical_notes_max_tokens_per_note, logger=logger)
+    dataset = NightingaleTrainingDataset(dataset_dir, mode, sequence_length, insert_static_demographic_tokens, clinical_notes_dir, clinical_notes_max_note_count, clinical_notes_max_tokens_per_note, logger=logger)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return dataloader
 
