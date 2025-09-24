@@ -11,22 +11,11 @@ https://github.com/huggingface/transformers/blob/main/src/transformers/models/gp
 
 import math
 import inspect
-from dataclasses import dataclass
 from src.models.base import BaseNightingaleModel
 from src.models.registry import register_model
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-
-@dataclass
-class GPTConfig:
-    context_length: int = 1024
-    vocab_size: int = 50304 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
-    n_layers: int = 12
-    n_heads: int = 12
-    model_dim: int = 768
-    dropout: float = 0.0
-    bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
 
 class LayerNorm(nn.Module):
     """ LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False """
