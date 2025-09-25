@@ -30,9 +30,24 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
         logger (Logger, optional): The logger to use for logging dataset statistics and warnings.
     """
 
-    def __init__(self, dataset_dir: str, vocab_path: str, sequence_length: int, start_token_id: int = None, end_token_ids: list[int] = None, start_token_str: str = None, end_token_strs: list[str] = None, include_patients_without_end_token: bool = False, seconds_offset: int = None, logger: Logger = None) -> None:
+    def __init__(
+        self,
+        dataset_dir: str,
+        vocab_path: str,
+        sequence_length: int,
+        insert_static_demographic_tokens: bool = True,
+        start_token_id: int = None,
+        end_token_ids: list[int] = None,
+        start_token_str: str = None,
+        end_token_strs: list[str] = None,
+        include_patients_without_end_token: bool = False,
+        seconds_offset: int = None,
+        logger: Logger = None
+        ) -> None:
+
         self.dataset_dir = dataset_dir
         self.sequence_length = sequence_length
+        self.insert_static_demographic_tokens = insert_static_demographic_tokens
         self.include_patients_without_end_token = include_patients_without_end_token
         self.seconds_offset = seconds_offset
         self.logger = logger
@@ -109,6 +124,13 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
                     try:
                         input_tokens, input_timestamps, end_token, start_token_idx, end_token_idx = self._generate_rollout(subject_data["tokens"], subject_data["timestamps"])
                         
+                        # map to tensors
+                        input_tokens = torch.tensor(input_tokens)
+                        input_timestamps = torch.tensor(input_timestamps)
+                        end_token = torch.tensor(end_token)
+                        start_token_idx = torch.tensor(start_token_idx)
+                        end_token_idx = torch.tensor(end_token_idx)
+
                         # Check if patient has a valid end token
                         if end_token == -1:
                             patients_without_end_token += 1
@@ -117,15 +139,35 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
                                     self.logger.debug(f"Excluding subject {subject_data['subject_id']} - no valid end token found")
                                 continue
                         
+                        # insert static demographic tokens
+                        if self.insert_static_demographic_tokens:
+                            # Convert to tensors to handle numpy arrays properly
+                            tokens_tensor = torch.tensor(subject_data["tokens"])
+                            timestamps_tensor = torch.tensor(subject_data["timestamps"])
+                            static_demographic_token_ids = tokens_tensor[timestamps_tensor == 0]
+                            
+                            # Adjust input sequence to maintain total sequence_length
+                            static_token_count = len(static_demographic_token_ids)
+                            if static_token_count > 0:
+                                # Truncate input_tokens to make room for static tokens
+                                max_input_tokens = self.sequence_length - static_token_count
+                                if len(input_tokens) > max_input_tokens:
+                                    input_tokens = input_tokens[-max_input_tokens:]
+                                    input_timestamps = input_timestamps[-max_input_tokens:]
+                                
+                                # Prepend static demographic tokens
+                                input_tokens = torch.cat([static_demographic_token_ids, input_tokens])
+                                input_timestamps = torch.cat([torch.zeros(static_token_count, dtype=input_timestamps.dtype), input_timestamps])
+
                         # Include the patient
                         patients_with_valid_rollout += 1
                         data.append({
                             "subject_id": torch.tensor(subject_data["subject_id"]),
-                            "input_tokens": torch.tensor(input_tokens),
-                            "input_timestamps": torch.tensor(input_timestamps),
-                            "end_token": torch.tensor(end_token),
-                            "start_token_idx": torch.tensor(start_token_idx),
-                            "end_token_idx": torch.tensor(end_token_idx)
+                            "input_tokens": input_tokens,
+                            "input_timestamps": input_timestamps,
+                            "end_token": end_token,
+                            "start_token_idx": start_token_idx,
+                            "end_token_idx": end_token_idx
                         })
                         
                     except ValueError as e:
