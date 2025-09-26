@@ -44,6 +44,9 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
     dataset_list = list(dataset)
     total_subjects = len(dataset_list)
     
+    # Initialize results_df
+    results_df = pd.DataFrame()
+    
     # Process subjects in batches
     for batch_start in tqdm(range(0, total_subjects, num_subjects_per_batch), desc="Processing subject batches"):
         batch_end = min(batch_start + num_subjects_per_batch, total_subjects)
@@ -163,13 +166,16 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                 }
                 all_results.append(result_row)
     
-        # save dataframe after each batch
+        # Save dataframe after each batch (incremental saving)
         results_df = pd.DataFrame(all_results)
         results_path = os.path.join(save_dir, "rollout_results.csv")
         results_df.to_csv(results_path, index=False)
     
     print(f"Saved {len(results_df)} outcome records to {results_path}")
-    print(f"Summary: {len(results_df['subject_id'].unique())} subjects, {len(results_df)} total outcome records")
+    if len(results_df) > 0:
+        print(f"Summary: {len(results_df['subject_id'].unique())} subjects, {len(results_df)} total outcome records")
+    else:
+        print("No results to summarize - dataset was empty or no valid subjects processed")
     
     return results_df
 
