@@ -113,7 +113,7 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
         # get all the pickle files in the dataset directory
         file_paths = [
             os.path.join(dataset_dir, file) for file in os.listdir(dataset_dir) if file.endswith(".pkl")
-        ][:2]
+        ]
 
         for file_path in tqdm(file_paths, desc="Loading data"):
             with open(file_path, "rb") as f:
