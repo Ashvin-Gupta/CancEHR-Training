@@ -90,6 +90,8 @@ class RolloutEvaluationDataset(torch.utils.data.Dataset):
             raise ValueError("Either end_token_ids or end_token_strs must be provided")
 
         self.data = self._load_data_from_dir(dataset_dir)
+        if len(self.data) == 0:
+            raise ValueError("No matching datapoints found in dataset, check dataset directory and start and end tokens")
 
     def _load_data_from_dir(self, dataset_dir: str) -> list:
         """

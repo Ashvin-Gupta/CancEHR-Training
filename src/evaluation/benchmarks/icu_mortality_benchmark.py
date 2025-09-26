@@ -35,7 +35,7 @@ def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts:
     
     # ICU mortality evaluation setup
     start_token_str = "ICU_ADMISSION//Medical Intensive Care Unit (MICU)"
-    end_token_strs = ["MEDS_DEATH", "HOSPITAL_DISCHARGE//HOME", "HOSPITAL_DISCHARGE//UNK", "HOSPITAL_DISCHARGE//HOME HEALTH CARE"]
+    end_token_strs = ["MEDS_DEATH", "ICU_DISCHARGE//Medical Intensive Care Unit (MICU)"]
     seconds_offset = hours_offset * 60 * 60  # Convert hours to seconds
     
     # Create dataset with time-based evaluation
@@ -55,6 +55,9 @@ def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts:
     print(f"Start token: {start_token_str}")
     print(f"End tokens: {end_token_strs}")
     print(f"Time window: {hours_offset} hours after ICU admission")
+
+    if len(dataset) == 0:
+        raise ValueError("No matching datapoints found in dataset, check start and end tokens")
     
     # Setup save directory
     save_dir = os.path.join(experiment_dir, f"evaluations/icu_mortality_{hours_offset}h")
