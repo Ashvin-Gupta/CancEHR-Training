@@ -19,7 +19,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
     Args:
         model (torch.nn.Module): The model to evaluate.
         dataset (RolloutEvaluationDataset): The dataset to evaluate on.
-        max_steps (int): The maximum number of steps to take for each rollout.
+        max_steps (int): The maximum number of prediction steps for each individual rollout.
         num_rollouts (int): The number of rollouts to run for each subject.
         num_subjects_per_batch (int): The number of subjects to process in each batch.
         temperature (float): The temperature to use for sampling.
@@ -53,8 +53,9 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
             rollout_queue.append((subject_data, rollout_idx, rollout_id_counter))
             rollout_id_counter += 1
     
-    total_rollouts = len(rollout_queue)
-    inference_count = 0  # Initialize inference counter
+        total_rollouts = len(rollout_queue)
+        inference_count = 0  # Initialize inference counter
+        correct_predictions = 0  # Track correct end token predictions
     
     if total_rollouts == 0:
         results_df, simulations_df = pd.DataFrame(), pd.DataFrame()
@@ -69,6 +70,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
         # Tracking for each slot
         slot_to_rollout = {}  # slot_idx -> (subject_data, rollout_idx, unique_rollout_id)
         initial_input_tokens = {}  # unique_rollout_id -> initial_tokens
+        rollout_steps = {}  # slot_idx -> current_step_count
         
         # Results collection
         all_results = []
@@ -88,10 +90,14 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                     active_mask[slot_idx] = True
                     slot_to_rollout[slot_idx] = (subject_data, rollout_idx, unique_rollout_id)
                     initial_input_tokens[unique_rollout_id] = input_tokens.clone()
+                    rollout_steps[slot_idx] = 0  # Initialize step counter for this rollout
         
-        def _process_completed_rollout(slot_idx, step, token, is_end):
+        def _process_completed_rollout(slot_idx, token, is_end):
             """Process a completed rollout and free up the slot."""
+            nonlocal correct_predictions
+            
             subject_data, rollout_idx, unique_rollout_id = slot_to_rollout[slot_idx]
+            current_step = rollout_steps[slot_idx]
             
             # Get subject info
             subject_id = subject_data["subject_id"].item()
@@ -106,10 +112,14 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
             # Determine outcome and steps
             if is_end:
                 rollout_outcome = dataset.vocab[dataset.vocab["token"] == token]["str"].values[0]
-                steps_taken = step + 1
+                steps_taken = current_step + 1
+                
+                # Check if prediction matches the real end token (for accuracy tracking)
+                if end_token_value != -1 and token == end_token_value:
+                    correct_predictions += 1
             else:
                 rollout_outcome = "max_steps"
-                steps_taken = max_steps
+                steps_taken = current_step + 1
             
             # Create simulation record
             simulation_row = {
@@ -127,6 +137,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
             # Mark slot as inactive and clean up
             active_mask[slot_idx] = False
             del slot_to_rollout[slot_idx]
+            del rollout_steps[slot_idx]
         
         # Initial slot filling
         _fill_empty_slots()
@@ -137,12 +148,14 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
             completed_count = 0
             save_frequency = max(1, total_rollouts // 20)  # Save 20 times during execution
             
-            for step in range(max_steps):
+            while True:
                 if not active_mask.any() and not rollout_queue:
                     break  # All rollouts completed
                 
                 if not active_mask.any():
-                    continue  # No active rollouts, but queue might have items
+                    # Fill empty slots if queue has items
+                    _fill_empty_slots()
+                    continue
                 
                 # Get predictions for active rollouts
                 active_indices = torch.where(active_mask)[0]
@@ -166,10 +179,14 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                     slot_idx = slot_idx.item()  # Convert tensor to Python int
                     token = next_tokens[i].item()
                     is_end = is_end_token[i].item()
+                    current_step = rollout_steps[slot_idx]
                     
-                    if is_end or step == max_steps - 1:
-                        # Rollout finished
-                        _process_completed_rollout(slot_idx, step, token, is_end)
+                    # Increment step count for this rollout
+                    rollout_steps[slot_idx] += 1
+                    
+                    if is_end or rollout_steps[slot_idx] >= max_steps:
+                        # Rollout finished (either found end token or reached max steps)
+                        _process_completed_rollout(slot_idx, token, is_end)
                         completed_count += 1
                     else:
                         # Update token sequence for next iteration
@@ -181,9 +198,10 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                 # Fill empty slots with new rollouts
                 _fill_empty_slots()
                 
-                # Update progress bar with both counters
+                # Update progress bar with accuracy and inference counts
                 progress_bar.n = completed_count
-                progress_bar.postfix = f"Inference Calls: {inference_count}"
+                accuracy = (correct_predictions / completed_count * 100) if completed_count > 0 else 0.0
+                progress_bar.postfix = f"Accuracy: {accuracy:.1f}% | Inferences: {inference_count}"
                 progress_bar.refresh()
                 
                 # Save results periodically

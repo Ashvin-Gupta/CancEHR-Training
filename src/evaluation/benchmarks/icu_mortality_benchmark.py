@@ -20,7 +20,7 @@ def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts:
         num_rollouts (int): Number of rollouts per subject
         num_subjects_per_batch (int): Batch size for processing
         temperature (float): Sampling temperature
-        max_steps (int): Maximum prediction steps
+        max_steps (int): Maximum prediction steps per individual rollout
         device (str): Device for inference
         hours_offset (int): Hours of data to include after ICU admission
     """
@@ -123,11 +123,14 @@ if __name__ == "__main__":
     parser.add_argument("--num_rollouts", type=int, default=5, help="Number of rollouts per subject")
     parser.add_argument("--num_subjects_per_batch", type=int, default=64, help="Batch size for processing")
     parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature")
-    parser.add_argument("--max_steps", type=int, default=512, help="Maximum prediction steps")
+    parser.add_argument("--max_steps", type=int, default=512, help="Maximum prediction steps per individual rollout")
     parser.add_argument("--device", type=str, default="cuda", help="Device for inference")
     parser.add_argument("--hours_offset", type=int, default=24, help="Hours of data after ICU admission")
     
     args = parser.parse_args()
+
+    # print args
+    print(args)
     
     results = icu_mortality_benchmark(
         experiment_dir=args.experiment_dir,
