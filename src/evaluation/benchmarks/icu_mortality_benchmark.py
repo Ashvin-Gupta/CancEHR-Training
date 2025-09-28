@@ -10,7 +10,7 @@ import argparse
 
 def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts: int = 5, 
                           num_subjects_per_batch: int = 64, temperature: float = 1.0, 
-                          max_steps: int = 512, device: str = "cuda", hours_offset: int = 24):
+                          max_steps: int = 512, device: str = "cuda", hours_offset: int = 24, save_every_n_percent: float = 5.0):
     """
     Runs ICU mortality prediction benchmark using ICU admission + specified hours of data.
     
@@ -23,6 +23,7 @@ def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts:
         max_steps (int): Maximum prediction steps per individual rollout
         device (str): Device for inference
         hours_offset (int): Hours of data to include after ICU admission
+        save_every_n_percent (float): Save every N%% of total rollouts (e.g., 5.0 for every 5%%). Default: 5.0.
     """
     
     # Load experiment config
@@ -34,8 +35,8 @@ def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts:
     model = load_model(experiment_config["model"])
     
     # ICU mortality evaluation setup
-    start_token_str = "ICU_ADMISSION//Medical Intensive Care Unit (MICU)"
-    end_token_strs = ["MEDS_DEATH", "ICU_DISCHARGE//Medical Intensive Care Unit (MICU)"]
+    start_token_str = "ICU_ADMISSION"
+    end_token_strs = ["MEDS_DEATH", "ICU_DISCHARGE"]
     seconds_offset = hours_offset * 60 * 60  # Convert hours to seconds
     
     # Create dataset with time-based evaluation
@@ -100,7 +101,8 @@ def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts:
         num_subjects_per_batch=num_subjects_per_batch,
         temperature=temperature,
         device=torch.device(device),
-        save_dir=save_dir
+        save_dir=save_dir,
+        save_every_n_percent=save_every_n_percent
     )
     
     # Print summary statistics
@@ -126,6 +128,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_steps", type=int, default=512, help="Maximum prediction steps per individual rollout")
     parser.add_argument("--device", type=str, default="cuda", help="Device for inference")
     parser.add_argument("--hours_offset", type=int, default=24, help="Hours of data after ICU admission")
+    parser.add_argument("--save_every_n_percent", type=float, default=5.0, help="Save every N%% of total rollouts (e.g., 5.0 for every 5%%). Default: 5.0")
     
     args = parser.parse_args()
 
@@ -140,5 +143,6 @@ if __name__ == "__main__":
         temperature=args.temperature,
         max_steps=args.max_steps,
         device=args.device,
-        hours_offset=args.hours_offset
+        hours_offset=args.hours_offset,
+        save_every_n_percent=args.save_every_n_percent
     )

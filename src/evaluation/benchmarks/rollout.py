@@ -12,7 +12,7 @@ from collections import deque
 # Enable TensorFloat32 for better performance on supported GPUs
 torch.set_float32_matmul_precision('high')
 
-def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset, max_steps: int, num_rollouts: int = 1, num_subjects_per_batch: int = 1, temperature: float = 1.0, device: torch.device = torch.device("cpu"), save_dir: str = None):
+def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset, max_steps: int, num_rollouts: int = 1, num_subjects_per_batch: int = 1, temperature: float = 1.0, device: torch.device = torch.device("cpu"), save_dir: str = None, save_every_n_percent: float = 5.0):
     """
     Runs a rollout benchmark on a model and saves results in a csv file in the save_dir.
 
@@ -25,6 +25,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
         temperature (float): The temperature to use for sampling.
         device (torch.device): The device to use for processing.
         save_dir (str): The directory to save the results to.
+        save_every_n_percent (float): Save every N% of total rollouts (e.g., 5.0 for every 5%). Default: 5.0.
 
     Returns:
         pd.DataFrame: A dataframe containing the results of the benchmark.
@@ -71,6 +72,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
         slot_to_rollout = {}  # slot_idx -> (subject_data, rollout_idx, unique_rollout_id)
         initial_input_tokens = {}  # unique_rollout_id -> initial_tokens
         rollout_steps = {}  # slot_idx -> current_step_count
+        generated_sequences = {}  # slot_idx -> list of generated token ids
         
         # Results collection
         all_results = []
@@ -91,6 +93,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                     slot_to_rollout[slot_idx] = (subject_data, rollout_idx, unique_rollout_id)
                     initial_input_tokens[unique_rollout_id] = input_tokens.clone()
                     rollout_steps[slot_idx] = 0  # Initialize step counter for this rollout
+                    generated_sequences[slot_idx] = []  # Initialize generated sequence for this rollout
         
         def _process_completed_rollout(slot_idx, token, is_end):
             """Process a completed rollout and free up the slot."""
@@ -121,6 +124,9 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                 rollout_outcome = "max_steps"
                 steps_taken = current_step + 1
             
+            # Get the complete generated sequence for this rollout
+            generated_token_list = generated_sequences.get(slot_idx, [])
+            
             # Create simulation record
             simulation_row = {
                 "subject_id": subject_id,
@@ -128,7 +134,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                 "real_end_token_steps": real_end_token_steps,
                 "outcome": rollout_outcome,
                 "input_tokens": initial_input_tokens[unique_rollout_id].cpu().tolist(),
-                "predicted_tokens": token if token is not None else None,
+                "predicted_tokens": generated_token_list,
                 "steps_taken": steps_taken
             }
             all_simulations.append(simulation_row)
@@ -138,6 +144,8 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
             active_mask[slot_idx] = False
             del slot_to_rollout[slot_idx]
             del rollout_steps[slot_idx]
+            if slot_idx in generated_sequences:
+                del generated_sequences[slot_idx]
         
         # Initial slot filling
         _fill_empty_slots()
@@ -146,7 +154,9 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
         with torch.no_grad():
             progress_bar = tqdm(total=total_rollouts, desc="Dynamic rollout processing")
             completed_count = 0
-            save_frequency = max(1, total_rollouts // 20)  # Save 20 times during execution
+            
+            # Calculate save frequency based on percentage
+            save_frequency = max(1, int(total_rollouts * save_every_n_percent / 100))
             
             while True:
                 if not active_mask.any() and not rollout_queue:
@@ -184,6 +194,9 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                     # Increment step count for this rollout
                     rollout_steps[slot_idx] += 1
                     
+                    # Add token to generated sequence
+                    generated_sequences[slot_idx].append(token)
+                    
                     if is_end or rollout_steps[slot_idx] >= max_steps:
                         # Rollout finished (either found end token or reached max steps)
                         _process_completed_rollout(slot_idx, token, is_end)
@@ -207,6 +220,7 @@ def rollout_benchmark(model: torch.nn.Module, dataset: RolloutEvaluationDataset,
                 # Save results periodically
                 if completed_count > 0 and completed_count % save_frequency == 0:
                     if all_simulations:
+                        print(f"Saving simulations to {save_dir}")
                         simulations_df = pd.DataFrame(all_simulations)
                         simulations_path = os.path.join(save_dir, "simulations.csv")
                         simulations_df.to_csv(simulations_path, index=False)
@@ -302,6 +316,7 @@ if __name__ == "__main__":
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--max_steps", type=int, default=2048)
     parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--save_every_n_percent", type=float, default=5.0, help="Save every N%% of total rollouts (e.g., 5.0 for every 5%%). Default: 5.0")
     parser.add_argument("--include_patients_without_end_token", action="store_true", help="Include patients without valid end tokens in evaluation")
 
     args = parser.parse_args()
@@ -315,8 +330,10 @@ if __name__ == "__main__":
 
     model = load_model(experiment_config["model"])
 
-    start_token_str = "HOSPITAL_ADMISSION//EW EMER.//EMERGENCY ROOM"
-    end_token_strs = ["MEDS_DEATH", "TRANSFER_TO//discharge//UNKNOWN", "HOSPITAL_DISCHARGE//HOME", "HOSPITAL_DISCHARGE//UNK"]
+    # start_token_str = "HOSPITAL_ADMISSION//EW EMER.//EMERGENCY ROOM"
+    # end_token_strs = ["MEDS_DEATH", "TRANSFER_TO//discharge//UNKNOWN", "HOSPITAL_DISCHARGE//HOME", "HOSPITAL_DISCHARGE//UNK"]
+    start_token_str = "ICU_ADMISSION"
+    end_token_strs = ["MEDS_DEATH", "ICU_DISCHARGE"]
 
     dataset = RolloutEvaluationDataset(dataset_dir, vocab_path, sequence_length=experiment_config["model"]["context_length"], start_token_str=start_token_str, end_token_strs=end_token_strs, include_patients_without_end_token=args.include_patients_without_end_token, logger=None)
 
@@ -334,6 +351,7 @@ if __name__ == "__main__":
             "temperature": args.temperature,
             "max_steps": args.max_steps,
             "device": args.device,
+            "save_every_n_percent": args.save_every_n_percent,
             "include_patients_without_end_token": args.include_patients_without_end_token
         },
         "dataset": {
@@ -350,4 +368,4 @@ if __name__ == "__main__":
     print(f"Saved config to {config_path}")
 
     # Run the benchmark
-    results_df = rollout_benchmark(model, dataset, max_steps=args.max_steps, num_rollouts=args.num_rollouts, num_subjects_per_batch=args.num_subjects_per_batch, temperature=args.temperature, device=torch.device(args.device), save_dir=save_dir)
+    results_df = rollout_benchmark(model, dataset, max_steps=args.max_steps, num_rollouts=args.num_rollouts, num_subjects_per_batch=args.num_subjects_per_batch, temperature=args.temperature, device=torch.device(args.device), save_dir=save_dir, save_every_n_percent=args.save_every_n_percent)
