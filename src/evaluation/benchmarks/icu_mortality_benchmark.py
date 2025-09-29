@@ -33,6 +33,7 @@ def icu_mortality_benchmark(experiment_dir: str, dataset_dir: str, num_rollouts:
     
     # Load model
     model = load_model(experiment_config["model"])
+    model.load_state_dict(torch.load(os.path.join(experiment_dir, "model.pth"), map_location=torch.device(device)))
     
     # ICU mortality evaluation setup
     start_token_str = "ICU_ADMISSION"
