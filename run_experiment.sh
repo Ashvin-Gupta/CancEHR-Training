@@ -14,7 +14,7 @@ BASE_DIR="/data/home/qc25022/CancEHR-Training"
 
 # --- Environment Setup ---
 module load intel intel-mpi python
-source /data/home/qc25022/CancEHR-Training/env/bin/activate
+source /data/home/qc25022/CancEHR-Training/venv/bin/activate
 
 # --- Execute from Project Root ---
 # Change to the base directory before running the python command
