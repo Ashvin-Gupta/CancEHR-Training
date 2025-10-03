@@ -25,6 +25,5 @@ echo "Starting experiment from directory: $(pwd)"
 python -m src.experiments.run \
     --config_name cprd_lstm_test \
     --experiment_name exp_001 \
-    --overwrite
 echo "Pipeline finished."
 deactivate
