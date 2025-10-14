@@ -64,3 +64,65 @@ def get_dataloader(config: dict, split: str) -> DataLoader:
         collate_fn=pad_collate # <-- Use our custom collate function
     )
     return dataloader
+
+if __name__ == '__main__':
+    """
+    A simple test block to verify that the UnifiedEHRDataset and dataloader are working correctly.
+    
+    This can be run directly from the command line:
+    python -m src.data.dataloader
+    """
+    print("--- Running Dataloader Verification Script ---")
+
+    # --- 1. Create a dummy config for testing ---
+    # IMPORTANT: Update these paths to your actual file locations
+    test_config = {
+        "format": "tokens",
+        "batch_size": 4,
+        "num_workers": 0, # Use 0 for simple debugging
+        "cutoff_months": 6,
+        "data_dir": "/data/scratch/qc25022/upgi/event_stream/", # Path to your consolidated data
+        "vocab_filepath": "/data/scratch/qc25022/upgi/tokenised_data/cprd_test/vocab.csv",
+        "labels_filepath": "/data/scratch/qc25022/upgi/master_subject_labels.csv",
+        "medical_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv",
+        "lab_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv"
+    }
+
+    # --- 2. Test the 'tokens' format ---
+    print("\n--- Verifying 'tokens' format for custom models ---")
+    test_config['format'] = 'tokens'
+    token_dataloader = get_dataloader(test_config, split="train")
+    
+    try:
+        token_batch = next(iter(token_dataloader))
+        if token_batch:
+            print("Successfully fetched one batch in 'tokens' format.")
+            print(f"  - Tokens tensor shape: {token_batch['tokens'].shape}")
+            print(f"  - Lengths tensor shape: {token_batch['lengths'].shape}")
+            print(f"  - Labels tensor: {token_batch['labels']}")
+            print(f"  - Batch size matches: {token_batch['tokens'].shape[0] == test_config['batch_size']}")
+        else:
+            print("  - Dataloader produced an empty batch.")
+    except Exception as e:
+        print(f"  - FAILED to fetch a batch in 'tokens' format. Error: {e}")
+
+
+    # --- 3. Test the 'text' format ---
+    print("\n--- Verifying 'text' format for LLM fine-tuning ---")
+    test_config['format'] = 'text'
+    text_dataloader = get_dataloader(test_config, split="train")
+    
+    try:
+        text_batch = next(iter(text_dataloader))
+        if text_batch:
+            print("Successfully fetched one batch in 'text' format.")
+            print(f"  - Number of text samples in batch: {len(text_batch['text'])}")
+            print(f"  - Labels tensor: {text_batch['labels']}")
+            print("\n  - Example Patient Narrative (first in batch):")
+            print(f"    '{text_batch['text'][0][:300]}...'") # Print first 300 characters
+        else:
+            print("  - Datalaloader produced an empty batch.")
+    except Exception as e:
+        print(f"  - FAILED to fetch a batch in 'text' format. Error: {e}")
+
+    print("\n--- Verification Script Finished ---")

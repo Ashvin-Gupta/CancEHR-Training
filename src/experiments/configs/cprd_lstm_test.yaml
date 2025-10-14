@@ -24,9 +24,9 @@ data:
   val_dataset_dir: "/home/joshua/data/mimic/mimic_iv/meds/mimic_iv_meds/tokenized_data/ethos_timetokens/tuning"
   vocab_path: "/home/joshua/data/mimic/mimic_iv/meds/mimic_iv_meds/tokenized_data/ethos_timetokens/vocab.csv"
 
-  train_dataset_dir: "/home/scratch/qc25022/liver/tokenised_data/cprd_test/train"
-  val_dataset_dir: "/home/scratch/qc25022/liver/tokenised_data/cprd_test/tuning"
-  vocab_path: "/home/scratch/qc25022/liver/tokenised_data/cprd_test/vocab.csv"
+  train_dataset_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/train"
+  val_dataset_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/tuning"
+  vocab_path: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv"
 
 
   sequence_length: 512
