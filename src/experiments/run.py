@@ -65,9 +65,10 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
 
     # check if experiments directory exists, if so ask user if they want to overwrite
     if os.path.exists(experiment_dir):
-        overwrite = input(
-            f"Experiment directory {experiment_dir} already exists. Overwrite? (y/n): "
-        )
+        # overwrite = input(
+        #     f"Experiment directory {experiment_dir} already exists. Overwrite? (y/n): "
+        # )
+        overwrite = "y"
         if overwrite != "y":
             print("Exiting...")
             return
