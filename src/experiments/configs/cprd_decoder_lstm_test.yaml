@@ -20,9 +20,6 @@ training:
   device: "cpu"
 
 data:
-  train_dataset_dir: "/home/joshua/data/mimic/mimic_iv/meds/mimic_iv_meds/tokenized_data/ethos_timetokens/train"
-  val_dataset_dir: "/home/joshua/data/mimic/mimic_iv/meds/mimic_iv_meds/tokenized_data/ethos_timetokens/tuning"
-  vocab_path: "/home/joshua/data/mimic/mimic_iv/meds/mimic_iv_meds/tokenized_data/ethos_timetokens/vocab.csv"
 
   train_dataset_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/train"
   val_dataset_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/tuning"

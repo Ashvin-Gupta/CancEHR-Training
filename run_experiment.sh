@@ -2,7 +2,7 @@
 #$ -cwd                 
 #$ -pe smp 4
 #$ -l h_rt=24:0:0
-#$ -l h_vmem=1G
+#$ -l h_vmem=24G
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_Files/loge/
@@ -22,9 +22,9 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-#python -m src.experiments.run \
-#    --config_name cprd_lstm_test \
-#    --experiment_name exp_001 
-python -m src.data.unified_dataloader
+python -m src.experiments.run \
+   --config_name cprd_decoder_lstm_test \
+   --experiment_name exp_001 
+
 echo "Pipeline finished."
 deactivate

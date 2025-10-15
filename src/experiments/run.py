@@ -98,30 +98,33 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
     vocab_df.to_csv(os.path.join(experiment_dir, "vocab.csv"), index=False)
 
     # Create dataloaders
-    train_dataloader = get_dataloader(
-        config["data"]["train_dataset_dir"],
-        config["data"]["batch_size"],
-        config["data"]["shuffle"],
-        config["data"]["sequence_length"],
-        mode="train",
-        insert_static_demographic_tokens=config["data"]["insert_static_demographic_tokens"],
-        clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
-        clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
-        clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
-        logger=logger,
-    )
-    val_dataloader = get_dataloader(
-        config["data"]["val_dataset_dir"],
-        config["data"]["batch_size"],
-        config["data"]["shuffle"],
-        config["data"]["sequence_length"],
-        mode="eval",
-        insert_static_demographic_tokens=config["data"]["insert_static_demographic_tokens"],
-        clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
-        clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
-        clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
-        logger=logger,
-    )
+    train_dataloader = get_dataloader(config, "train")
+    val_dataloader = get_dataloader(config, "tuning")
+
+    # train_dataloader = get_dataloader(
+    #     config["data"]["train_dataset_dir"],
+    #     config["data"]["batch_size"],
+    #     config["data"]["shuffle"],
+    #     config["data"]["sequence_length"],
+    #     mode="train",
+    #     insert_static_demographic_tokens=config["data"]["insert_static_demographic_tokens"],
+    #     clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
+    #     clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
+    #     clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
+    #     logger=logger,
+    # )
+    # val_dataloader = get_dataloader(
+    #     config["data"]["val_dataset_dir"],
+    #     config["data"]["batch_size"],
+    #     config["data"]["shuffle"],
+    #     config["data"]["sequence_length"],
+    #     mode="eval",
+    #     insert_static_demographic_tokens=config["data"]["insert_static_demographic_tokens"],
+    #     clinical_notes_dir=config["data"]["clinical_notes"]["dir"] if "clinical_notes" in config["data"] else None, # load clinical notes if they are provided
+    #     clinical_notes_max_note_count=config["data"]["clinical_notes"]["max_note_count"] if "clinical_notes" in config["data"] else None,
+    #     clinical_notes_max_tokens_per_note=config["data"]["clinical_notes"]["max_tokens_per_note"] if "clinical_notes" in config["data"] else None,
+    #     logger=logger,
+    # )
 
     # Load model
     model = load_model(config["model"])
