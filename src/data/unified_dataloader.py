@@ -119,7 +119,7 @@ if __name__ == '__main__':
             print(f"  - Number of text samples in batch: {len(text_batch['text'])}")
             print(f"  - Labels tensor: {text_batch['labels']}")
             print("\n  - Example Patient Narrative (first in batch):")
-            print(f"    '{text_batch['text'][0][:300]}...'") # Print first 300 characters
+            print(f"    '{text_batch['text'][0][:500]}...'") # Print first 500 characters
         else:
             print("  - Datalaloader produced an empty batch.")
     except Exception as e:

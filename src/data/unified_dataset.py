@@ -91,7 +91,7 @@ class UnifiedEHRDataset(Dataset):
                 parts = token_string.split('//')
                 return f"{parts[1]}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                return f"({token_string})"
+                return f"{token_string[1:]}"
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
                 return ""
             else:
@@ -143,11 +143,8 @@ class UnifiedEHRDataset(Dataset):
             }
         elif self.format == 'text':
             string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
-            print("Translated string codes")
             translated_phrases = [self._translate_token(code) for code in string_codes]
-            print("Translated phrases")
             narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
-            print("Translated narrative")
             return {
                 "text": narrative,
                 "label": torch.tensor(label, dtype=torch.long)
