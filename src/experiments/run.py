@@ -98,8 +98,8 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
     vocab_df.to_csv(os.path.join(experiment_dir, "vocab.csv"), index=False)
 
     # Create dataloaders in unified dataloader
-    train_dataloader = get_dataloader(config, "train")
-    val_dataloader = get_dataloader(config, "tuning")
+    # train_dataloader = get_dataloader(config, "train")
+    # val_dataloader = get_dataloader(config, "tuning")
 
     # Create dataloaders in dataloader (original Nightingale dataloader)
     train_dataloader = get_dataloader(
