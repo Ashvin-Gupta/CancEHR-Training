@@ -16,10 +16,11 @@ class UnifiedEHRDataset(Dataset):
         before the cancer diagnosis date.
     """
     def __init__(self, data_dir, vocab_file, labels_file, medical_lookup_file, lab_lookup_file,
-                 cutoff_months=None, format='tokens', split='train'):
+                 cutoff_months=None, max_sequence_length=512, format='tokens', split='train'):
         
         self.format = format
         self.cutoff_months = cutoff_months
+        self.max_sequence_length = max_sequence_length
         
         # Load all necessary mappings and lookup tables
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
@@ -117,6 +118,12 @@ class UnifiedEHRDataset(Dataset):
                         truncated_ids.append(token_ids[i])
                 token_ids = truncated_ids
         
+        # --- CONTEXT WINDOW TRUNCATION ---
+        if self.max_sequence_length is not None and self.format == 'tokens':
+            if len(token_ids) > self.max_sequence_length:
+                token_ids = token_ids[-self.max_sequence_length:]
+
+        
         # --- FORK THE OUTPUT FORMAT ---
         if self.format == 'tokens':
             return {
@@ -126,7 +133,7 @@ class UnifiedEHRDataset(Dataset):
         elif self.format == 'text':
             string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
             translated_phrases = [self._translate_token(code) for code in string_codes]
-            narrative = " ".join([phrase for phrase in translated_phrases if phrase])
+            narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
             return {
                 "text": narrative,
                 "label": torch.tensor(label, dtype=torch.long)
