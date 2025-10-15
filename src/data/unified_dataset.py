@@ -24,9 +24,10 @@ class UnifiedEHRDataset(Dataset):
         
         # Load all necessary mappings and lookup tables
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
-        
+        print("Loaded mappings")
         # Load the patient records from the .pkl files for the specified split
         self.patient_records = self._load_data(os.path.join(data_dir, split))
+        print("Loaded patient records")
 
     def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""
@@ -131,9 +132,11 @@ class UnifiedEHRDataset(Dataset):
                 "label": torch.tensor(label, dtype=torch.long)
             }
         elif self.format == 'text':
+            print("Converting to text format")
             string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
             translated_phrases = [self._translate_token(code) for code in string_codes]
             narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
+            print("Translated narrative")
             return {
                 "text": narrative,
                 "label": torch.tensor(label, dtype=torch.long)
