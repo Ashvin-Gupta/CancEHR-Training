@@ -66,6 +66,7 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         data = []
 
         # get all the pickle files in the data directory
+        print(f'dataset_dir: {dataset_dir}')
         file_paths = [
             os.path.join(dataset_dir, file) for file in os.listdir(dataset_dir) if file.endswith(".pkl")
         ]
