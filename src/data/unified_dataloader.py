@@ -81,7 +81,7 @@ if __name__ == '__main__':
         "batch_size": 4,
         "num_workers": 0, # Use 0 for simple debugging
         "cutoff_months": 6,
-        "data_dir":'/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test'
+        "data_dir":'/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test',
         "vocab_filepath": "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv",
         "labels_filepath": "/data/scratch/qc25022/upgi/master_subject_labels.csv",
         "medical_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv",
