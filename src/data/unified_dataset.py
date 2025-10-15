@@ -74,6 +74,8 @@ class UnifiedEHRDataset(Dataset):
             if token_string.startswith('<time_interval_'):
                 time_part = token_string.split('_')[-1].strip('>')
                 return f"{time_part}"
+            elif token_string.startswith('AGE_'):
+                return f"{token_string}"
             elif token_string.startswith('MEDICAL//'):
                 code = token_string.split('//')[1].upper()
                 return self.medical_lookup.get(code, code.replace('_', ' ').title())
@@ -82,8 +84,12 @@ class UnifiedEHRDataset(Dataset):
                 return self.lab_lookup.get(code, code.replace('_', ' ').title())
             elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
                 return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
-            elif token_string.startswith(('GENDER//', 'ETHNICITY//', 'REGION//', 'AGE_decile', 'AGE_unit')):
-                return f"{token_string.split('//')[0].replace('_', ' ').title()}: {token_string.split('//')[1]}"
+            elif token_string.startswith(('GENDER//', 'ETHNICITY//')):
+                parts = token_string.split('//')
+                return f"{parts[1]}"
+            elif token_string.startswith('REGION//'):
+                parts = token_string.split('//')
+                return f"{parts[1]}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
                 return f"({token_string})"
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
@@ -91,7 +97,6 @@ class UnifiedEHRDataset(Dataset):
             else:
                 return f"Unknown"
         except Exception as e:
-            # This will print the exact code that is causing the error
             print(f"--- DEBUG: FAILED TO TRANSLATE TOKEN ---")
             print(f"Problematic Token String: '{token_string}'")
             print(f"Error: {e}")
