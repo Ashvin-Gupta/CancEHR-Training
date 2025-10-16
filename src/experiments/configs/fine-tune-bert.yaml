@@ -6,11 +6,17 @@ model:
   type: "huggingface_encoder"
   model_name: "emilyalsentzer/Bio_ClinicalBERT"
   num_classes: 5
+  max_length: 512
 
 # ... (optimiser, training sections) ..
 training:
   epochs: 100
-  device: "cpu".
+  device: "cpu"
+  output_dir: "output/cprd_finetune_bert_experiment"
+  learning_rate: 2e-5
+  batch_size: 16
+  weight_decay: 0.01
+
 
 data:
   format: "text" # <-- Tells the dataloader to give you natural language text

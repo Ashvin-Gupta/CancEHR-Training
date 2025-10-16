@@ -22,9 +22,12 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.experiments.run \
-   --config_name cprd_decoder_lstm_test \
-   --experiment_name exp_001 
+# python -m src.experiments.run \
+#    --config_name cprd_decoder_lstm_test \
+#    --experiment_name exp_001 
+
+python -m src.experiments.run_hf_finetune \
+   --config_filepath src/experiments/configs/fine-tune-bert.yaml 
 
 echo "Pipeline finished."
 deactivate
