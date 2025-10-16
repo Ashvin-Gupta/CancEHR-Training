@@ -6,8 +6,6 @@ import numpy as np
 import torch
 import os
 
-# Import your custom dataloader function
-# from src.data.unified_dataloader import get_dataloader
 from src.data.unified_dataset import UnifiedEHRDataset
 from torch.utils.data import Dataset
 
@@ -26,7 +24,11 @@ def compute_metrics(eval_pred):
     }
 
 class TokenizedDatasetWrapper(Dataset):
-    """Wrapper that tokenizes text on-the-fly."""
+    """Wrapper that tokenizes text on-the-fly.
+    Does the tokenization for the text format keeping the max length of tokens.
+    Can define as last 512 tokens by using left truncation.
+    """
+
     def __init__(self, base_dataset, tokenizer, max_length=512):
         self.base_dataset = base_dataset
         self.tokenizer = tokenizer
@@ -39,6 +41,8 @@ class TokenizedDatasetWrapper(Dataset):
         item = self.base_dataset[idx]
         if item is None:
             return None
+        
+        self.tokenizer.truncation_side = 'left'
         
         # Tokenize the text
         tokenized = self.tokenizer(
@@ -86,14 +90,6 @@ def main(config_path: str):
     train_dataset = UnifiedEHRDataset(split="train", **dataset_args)
     validation_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
     test_dataset = UnifiedEHRDataset(split="held_out", **dataset_args)
-
-    # # 2. Get the Dataset objects directly from your custom dataloader
-    # #    We set format to 'text' to get the natural language narratives.
-    # print("Initializing UnifiedEHRDataset in 'text' mode...")
-    # data_config['format'] = 'text' # Ensure format is set to text
-    # train_dataset = get_dataloader(data_config, split="train").dataset
-    # validation_dataset = get_dataloader(data_config, split="tuning").dataset
-    # test_dataset = get_dataloader(data_config, split="held_out").dataset
     
     # 3. Load Pre-trained Tokenizer
     print(f"Loading tokenizer for model: {model_config['model_name']}")

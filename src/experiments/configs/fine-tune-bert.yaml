@@ -11,7 +11,7 @@ model:
 # ... (optimiser, training sections) ..
 training:
   epochs: 100
-  device: "cpu"
+  device: "cuda"
   overwrite_output_dir: True
   output_dir: "/data/scratch/qc25022/upgi/experiments/finetune_bert_experiment"
   learning_rate: 2e-5
