@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, DataCollatorWithPadding
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, DataCollatorWithPadding, TokenizedDatasetWrapper
 from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support
 import numpy as np
 import torch
