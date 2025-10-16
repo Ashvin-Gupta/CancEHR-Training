@@ -69,20 +69,22 @@ def main(config_path: str):
 
     # 6. Set Up the Trainer from Hugging Face not custom trainer
     print("Setting up the Trainer...")
-    print(type(training_config['learning_rate']))
     training_args = TrainingArguments(
         output_dir=training_config['output_dir'],
         overwrite_output_dir=training_config['overwrite_output_dir'],
         learning_rate=float(training_config['learning_rate']),
-        per_device_train_batch_size=training_config['batch_size'],
-        per_device_eval_batch_size=training_config['batch_size'],
-        num_train_epochs=training_config['epochs'],
-        weight_decay=training_config['weight_decay'],
+        per_device_train_batch_size=int(training_config['batch_size']),
+        per_device_eval_batch_size=int(training_config['batch_size']),
+        num_train_epochs=int(training_config['epochs']),
+        weight_decay=float(training_config['weight_decay']),
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
     )
-
+    print('--------------------------------')
+    print(f'Type: {type(train_dataset)}')
+    print(f'Columns: {train_dataset.columns}')
+    train_dataset = train_dataset.rename(columns={'label':'labels'})
     trainer = Trainer(
         model=model,
         args=training_args,
