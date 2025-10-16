@@ -71,12 +71,13 @@ def main(config_path: str):
     print("Setting up the Trainer...")
     training_args = TrainingArguments(
         output_dir=training_config['output_dir'],
+        overwrite_output_dir=training_config['overwrite_output_dir'],
         learning_rate=training_config['learning_rate'],
         per_device_train_batch_size=training_config['batch_size'],
         per_device_eval_batch_size=training_config['batch_size'],
         num_train_epochs=training_config['epochs'],
         weight_decay=training_config['weight_decay'],
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
     )

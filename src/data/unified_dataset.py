@@ -29,7 +29,6 @@ class UnifiedEHRDataset(Dataset):
 
     def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""
-        print("Loading all necessary mappings...")
         
         vocab_df = pd.read_csv(vocab_file)
         self.id_to_token_map = pd.Series(vocab_df['str'].values, index=vocab_df['token']).to_dict()
@@ -47,9 +46,6 @@ class UnifiedEHRDataset(Dataset):
         unique_labels = sorted([l for l in labels_df['string_label'].unique() if l != 'Control'])
         self.label_to_id_map = {label: i + 1 for i, label in enumerate(unique_labels)}
         self.label_to_id_map['Control'] = 0
-        
-        print("Created label-to-ID mapping:")
-        print(self.label_to_id_map)
         
         labels_df['label_id'] = labels_df['string_label'].map(self.label_to_id_map)
         self.subject_to_label = pd.Series(labels_df['label_id'].values, index=labels_df['subject_id']).to_dict()
