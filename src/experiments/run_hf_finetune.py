@@ -133,8 +133,8 @@ def main(config_path: str):
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=tokenized_train_dataset,
-        eval_dataset=tokenized_validation_dataset,
+        train_dataset=train_tokenized_dataset,
+        eval_dataset=validation_tokenized_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
@@ -146,7 +146,7 @@ def main(config_path: str):
 
     # 8. Run Final Evaluation on the Test Set
     print("\n--- Evaluating on the test set ---")
-    test_results = trainer.evaluate(eval_dataset=tokenized_test_dataset)
+    test_results = trainer.evaluate(eval_dataset=test_tokenized_dataset)
     print(test_results)
 
 if __name__ == "__main__":
