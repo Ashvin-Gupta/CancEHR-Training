@@ -128,7 +128,7 @@ def main(config_path: str):
     )
 
     #  Use DataCollatorWithPadding for dynamic padding
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding_side="right")
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     trainer = Trainer(
         model=model,

@@ -42,6 +42,9 @@ def get_dataloader(config: dict, split: str) -> DataLoader:
 
     Returns:
         DataLoader: A PyTorch dataloader.
+
+    Only useful for the 'tokens' format.
+    For the 'text' format, use the UnifiedEHRDataset directly. Only appropriate for debugging.
     """
     print(f"Creating {split} dataloader...")
     
