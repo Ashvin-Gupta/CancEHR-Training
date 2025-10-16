@@ -7,7 +7,8 @@ import torch
 import os
 
 # Import your custom dataloader function
-from src.data.unified_dataloader import get_dataloader
+# from src.data.unified_dataloader import get_dataloader
+from src.data.unified_dataset import UnifiedEHRDataset
 from torch.utils.data import Dataset
 
 def compute_metrics(eval_pred):
