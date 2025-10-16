@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, DataCollatorWithPadding, TokenizedDatasetWrapper
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, DataCollatorWithPadding
 from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support
 import numpy as np
 import torch
@@ -22,6 +22,36 @@ def compute_metrics(eval_pred):
         'precision': precision,
         'recall': recall
     }
+
+class TokenizedDatasetWrapper(Dataset):
+    """Wrapper that tokenizes text on-the-fly."""
+    def __init__(self, base_dataset, tokenizer, max_length=512):
+        self.base_dataset = base_dataset
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+    
+    def __len__(self):
+        return len(self.base_dataset)
+    
+    def __getitem__(self, idx):
+        item = self.base_dataset[idx]
+        if item is None:
+            return None
+        
+        # Tokenize the text
+        tokenized = self.tokenizer(
+            item["text"], 
+            truncation=True, 
+            max_length=self.max_length,
+            # Don't pad here - let the data collator handle it
+        )
+        
+        # Return format expected by Trainer
+        return {
+            "input_ids": tokenized["input_ids"],
+            "attention_mask": tokenized["attention_mask"],
+            "labels": item["label"].item()  # Convert tensor to int
+        }
 
 def main(config_path: str):
     """
