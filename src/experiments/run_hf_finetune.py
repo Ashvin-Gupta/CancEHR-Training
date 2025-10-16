@@ -5,6 +5,8 @@ from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_su
 import numpy as np
 import torch
 import os
+import wandb
+from datetime import datetime
 
 from src.data.unified_dataset import UnifiedEHRDataset
 from torch.utils.data import Dataset
@@ -72,6 +74,14 @@ def main(config_path: str):
     data_config = config['data']
     training_config = config['training']
 
+    # Set up WandB
+    wandb_config = config.get('wandb', {})
+    if wandb_config:
+        os.environ["WANDB_PROJECT"] = wandb_config.get("project", "default-project")
+        run_name = wandb_config.get("run_name", f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+    else:
+        run_name = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
     # 2. Instantiate UnifiedEHRDataset directly
     print("Initializing UnifiedEHRDataset in 'text' mode...")
     
@@ -121,6 +131,8 @@ def main(config_path: str):
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
+        report_to="wandb",
+        run_name=run_name,
     )
 
     #  Use DataCollatorWithPadding for dynamic padding

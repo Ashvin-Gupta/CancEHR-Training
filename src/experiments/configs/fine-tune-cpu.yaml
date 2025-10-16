@@ -1,5 +1,4 @@
-# src/experiments/configs/finetune_bert.yaml
-name: "cprd_finetune_bert_experiment"
+name: "cprd_finetune_bert_cpu_experiment"
 
 model:
   # This section will be used by your new training script
@@ -10,11 +9,11 @@ model:
 
 wandb:
   project: "cancehr-finetuning"
-  run_name: "clinicalbert-lr-2e-5"
+  run_name: "clinicalbert-lr-2e-5-cpu"
 
 training:
   epochs: 100
-  device: "cuda"
+  device: "cpu"
   overwrite_output_dir: True
   output_dir: "/data/scratch/qc25022/upgi/experiments/finetune_bert_experiment"
   learning_rate: 2e-5

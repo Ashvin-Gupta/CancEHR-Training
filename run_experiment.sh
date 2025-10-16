@@ -13,6 +13,8 @@ set -e
 # Set the base directory for your project
 BASE_DIR="/data/home/qc25022/CancEHR-Training"
 
+export WANDB_API_KEY="3256683a0a9a004cf52e04107a3071099a53038e"
+
 # --- Environment Setup ---
 module load intel intel-mpi python
 source /data/home/qc25022/CancEHR-Training/venv/bin/activate
