@@ -69,10 +69,11 @@ def main(config_path: str):
 
     # 6. Set Up the Trainer from Hugging Face not custom trainer
     print("Setting up the Trainer...")
+    print(type(training_config['learning_rate']))
     training_args = TrainingArguments(
         output_dir=training_config['output_dir'],
         overwrite_output_dir=training_config['overwrite_output_dir'],
-        learning_rate=training_config['learning_rate'],
+        learning_rate=float(training_config['learning_rate']),
         per_device_train_batch_size=training_config['batch_size'],
         per_device_eval_batch_size=training_config['batch_size'],
         num_train_epochs=training_config['epochs'],
