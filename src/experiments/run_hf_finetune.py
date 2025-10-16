@@ -41,9 +41,9 @@ def main(config_path: str):
     #    We set format to 'text' to get the natural language narratives.
     print("Initializing UnifiedEHRDataset in 'text' mode...")
     data_config['format'] = 'text' # Ensure format is set to text
-    train_dataset = get_dataloader(data_config, split="train")
-    validation_dataset = get_dataloader(data_config, split="tuning")
-    test_dataset = get_dataloader(data_config, split="held_out")
+    train_dataset = get_dataloader(data_config, split="train").dataset
+    validation_dataset = get_dataloader(data_config, split="tuning").dataset
+    test_dataset = get_dataloader(data_config, split="held_out").dataset
     
     # 3. Load Pre-trained Tokenizer
     print(f"Loading tokenizer for model: {model_config['model_name']}")
@@ -54,11 +54,11 @@ def main(config_path: str):
         # The tokenizer will handle padding and truncation
         return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=model_config.get('max_length', 512))
 
-    print("Tokenizing the dataset on-the-fly...")
-    # We use .map() to apply the tokenizer to our custom dataset
-    tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True)
-    tokenized_validation_dataset = validation_dataset.map(preprocess_function, batched=True)
-    tokenized_test_dataset = test_dataset.map(preprocess_function, batched=True)
+    # print("Tokenizing the dataset on-the-fly...")
+    ## We use .map() to apply the tokenizer to our custom dataset
+    # tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True)
+    # tokenized_validation_dataset = validation_dataset.map(preprocess_function, batched=True)
+    # tokenized_test_dataset = test_dataset.map(preprocess_function, batched=True)
 
     # 5. Load Pre-trained Model
     print(f"Loading model: {model_config['model_name']}")
@@ -67,7 +67,7 @@ def main(config_path: str):
         num_labels=model_config['num_classes']
     )
 
-    # 6. Set Up the Trainer
+    # 6. Set Up the Trainer from Hugging Face not custom trainer
     print("Setting up the Trainer...")
     training_args = TrainingArguments(
         output_dir=training_config['output_dir'],
@@ -75,7 +75,7 @@ def main(config_path: str):
         per_device_train_batch_size=training_config['batch_size'],
         per_device_eval_batch_size=training_config['batch_size'],
         num_train_epochs=training_config['epochs'],
-        weight_decay=0.01,
+        weight_decay=training_config['weight_decay'],
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
@@ -84,9 +84,10 @@ def main(config_path: str):
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=tokenized_train_dataset,
-        eval_dataset=tokenized_validation_dataset,
+        train_dataset=train_dataset,
+        eval_dataset=validation_dataset,
         tokenizer=tokenizer,
+        data_collator=None,
         compute_metrics=compute_metrics,
     )
 
@@ -96,7 +97,7 @@ def main(config_path: str):
 
     # 8. Run Final Evaluation on the Test Set
     print("\n--- Evaluating on the test set ---")
-    test_results = trainer.evaluate(eval_dataset=tokenized_test_dataset)
+    test_results = trainer.evaluate(eval_dataset=test_dataset)
     print(test_results)
 
 if __name__ == "__main__":
