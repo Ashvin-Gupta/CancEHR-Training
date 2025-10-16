@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, DataCollatorWithPadding
 from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support
 import numpy as np
 import torch
@@ -36,7 +36,6 @@ def main(config_path: str):
     data_config = config['data']
     training_config = config['training']
 
-    # --- THE FIX IS HERE ---
     # 2. Get the Dataset objects directly from your custom dataloader
     #    We set format to 'text' to get the natural language narratives.
     print("Initializing UnifiedEHRDataset in 'text' mode...")
@@ -49,16 +48,11 @@ def main(config_path: str):
     print(f"Loading tokenizer for model: {model_config['model_name']}")
     tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
 
-    # 4. Preprocess and Tokenize the Dataset
-    def preprocess_function(examples):
-        # The tokenizer will handle padding and truncation
-        return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=model_config.get('max_length', 512))
-
-    # print("Tokenizing the dataset on-the-fly...")
-    ## We use .map() to apply the tokenizer to our custom dataset
-    # tokenized_train_dataset = train_dataset.map(preprocess_function, batched=True)
-    # tokenized_validation_dataset = validation_dataset.map(preprocess_function, batched=True)
-    # tokenized_test_dataset = test_dataset.map(preprocess_function, batched=True)
+    # 4. Wrap datasets with tokenisation 
+    max_length = model_config.get('max_length', 512)
+    train_dataset = TokenizedDatasetWrapper(train_dataset, tokenizer, max_length)
+    validation_dataset = TokenizedDatasetWrapper(validation_dataset, tokenizer, max_length)
+    test_dataset = TokenizedDatasetWrapper(test_dataset, tokenizer, max_length)
 
     # 5. Load Pre-trained Model
     print(f"Loading model: {model_config['model_name']}")
@@ -81,17 +75,17 @@ def main(config_path: str):
         save_strategy="epoch",
         load_best_model_at_end=True,
     )
-    print('--------------------------------')
-    print(f'Type: {type(train_dataset)}')
-    print(f'Columns: {train_dataset.columns}')
-    train_dataset = train_dataset.rename(columns={'label':'labels'})
+
+    #  Use DataCollatorWithPadding for dynamic padding
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding_side="right")
+
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=validation_dataset,
         tokenizer=tokenizer,
-        data_collator=None,
+        data_collator=data_collator,
         compute_metrics=compute_metrics,
     )
 
