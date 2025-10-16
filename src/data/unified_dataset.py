@@ -117,7 +117,8 @@ class UnifiedEHRDataset(Dataset):
         timestamps = patient_record['timestamps']
         
         # --- DYNAMIC TIME TRUNCATION ---
-        if self.cutoff_months is not None and label > 0: # Only truncate cancer cases
+        # Truncate the patient timeline based on the cancer diagnosis date and the cutoff months
+        if self.cutoff_months is not None and label > 0: 
             cancer_date = self.subject_to_cancer_date.get(subject_id)
             if pd.notna(cancer_date):
                 cutoff_date = cancer_date - pd.DateOffset(months=self.cutoff_months)
@@ -130,6 +131,8 @@ class UnifiedEHRDataset(Dataset):
                 token_ids = truncated_ids
         
         # --- CONTEXT WINDOW TRUNCATION ---
+        # Truncate the patient timeline based on the max sequence length but only for tokens format
+        #  Take first self.max_sequence_length tokens
         if self.max_sequence_length is not None and self.format == 'tokens':
             if len(token_ids) > self.max_sequence_length:
                 token_ids = token_ids[-self.max_sequence_length:]

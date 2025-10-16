@@ -8,6 +8,7 @@ import os
 
 # Import your custom dataloader function
 from src.data.unified_dataloader import get_dataloader
+from torch.utils.data import Dataset
 
 def compute_metrics(eval_pred):
     """
@@ -66,13 +67,32 @@ def main(config_path: str):
     data_config = config['data']
     training_config = config['training']
 
-    # 2. Get the Dataset objects directly from your custom dataloader
-    #    We set format to 'text' to get the natural language narratives.
+    # 2. Instantiate UnifiedEHRDataset directly
     print("Initializing UnifiedEHRDataset in 'text' mode...")
-    data_config['format'] = 'text' # Ensure format is set to text
-    train_dataset = get_dataloader(data_config, split="train").dataset
-    validation_dataset = get_dataloader(data_config, split="tuning").dataset
-    test_dataset = get_dataloader(data_config, split="held_out").dataset
+    
+    # Common dataset arguments
+    dataset_args = {
+        "data_dir": data_config["data_dir"],
+        "vocab_file": data_config["vocab_filepath"],
+        "labels_file": data_config["labels_filepath"],
+        "medical_lookup_file": data_config["medical_lookup_filepath"],
+        "lab_lookup_file": data_config["lab_lookup_filepath"],
+        "cutoff_months": data_config.get("cutoff_months"),
+        "format": 'text', # Ensure format is set to text
+        "max_sequence_length": model_config.get('max_length', 512)
+    }
+
+    train_dataset = UnifiedEHRDataset(split="train", **dataset_args)
+    validation_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
+    test_dataset = UnifiedEHRDataset(split="held_out", **dataset_args)
+
+    # # 2. Get the Dataset objects directly from your custom dataloader
+    # #    We set format to 'text' to get the natural language narratives.
+    # print("Initializing UnifiedEHRDataset in 'text' mode...")
+    # data_config['format'] = 'text' # Ensure format is set to text
+    # train_dataset = get_dataloader(data_config, split="train").dataset
+    # validation_dataset = get_dataloader(data_config, split="tuning").dataset
+    # test_dataset = get_dataloader(data_config, split="held_out").dataset
     
     # 3. Load Pre-trained Tokenizer
     print(f"Loading tokenizer for model: {model_config['model_name']}")
@@ -80,9 +100,9 @@ def main(config_path: str):
 
     # 4. Wrap datasets with tokenisation 
     max_length = model_config.get('max_length', 512)
-    train_dataset = TokenizedDatasetWrapper(train_dataset, tokenizer, max_length)
-    validation_dataset = TokenizedDatasetWrapper(validation_dataset, tokenizer, max_length)
-    test_dataset = TokenizedDatasetWrapper(test_dataset, tokenizer, max_length)
+    train_tokenized_dataset = TokenizedDatasetWrapper(train_dataset, tokenizer, max_length)
+    validation_tokenized_dataset = TokenizedDatasetWrapper(validation_dataset, tokenizer, max_length)
+    test_tokenized_dataset = TokenizedDatasetWrapper(test_dataset, tokenizer, max_length)
 
     # 5. Load Pre-trained Model
     print(f"Loading model: {model_config['model_name']}")
@@ -112,8 +132,8 @@ def main(config_path: str):
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=validation_dataset,
+        train_dataset=tokenized_train_dataset,
+        eval_dataset=tokenized_validation_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
@@ -125,7 +145,7 @@ def main(config_path: str):
 
     # 8. Run Final Evaluation on the Test Set
     print("\n--- Evaluating on the test set ---")
-    test_results = trainer.evaluate(eval_dataset=test_dataset)
+    test_results = trainer.evaluate(eval_dataset=tokenized_test_dataset)
     print(test_results)
 
 if __name__ == "__main__":
