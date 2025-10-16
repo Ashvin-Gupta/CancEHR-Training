@@ -127,5 +127,65 @@ if __name__ == '__main__':
             print("  - Datalaloader produced an empty batch.")
     except Exception as e:
         print(f"  - FAILED to fetch a batch in 'text' format. Error: {e}")
+    
+    # --- 4. Test temporal truncation with cutoff_months ---
+    print("\n--- Verifying Temporal Truncation (cutoff_months) ---")
+    print("Testing that increasing cutoff_months reduces sequence length for cancer cases...")
+    
+    # Create datasets with different cutoff values
+    cutoff_values = [None, 24, 12, 6]
+    
+    for cutoff in cutoff_values:
+        print(f"\n  Testing with cutoff_months={cutoff}:")
+        test_config['cutoff_months'] = cutoff
+        test_config['format'] = 'tokens'
+        
+        # Create dataset directly to inspect individual samples
+        dataset = UnifiedEHRDataset(
+            data_dir=test_config["data_dir"],
+            vocab_file=test_config["vocab_filepath"],
+            labels_file=test_config["labels_filepath"],
+            medical_lookup_file=test_config["medical_lookup_filepath"],
+            lab_lookup_file=test_config["lab_lookup_filepath"],
+            cutoff_months=cutoff,
+            format='tokens',
+            split='train'
+        )
+        
+        # Find a cancer case and a control to compare
+        cancer_idx = None
+        control_idx = None
+        
+        for i in range(min(100, len(dataset))):  # Check first 100 samples
+            sample = dataset[i]
+            if sample is not None:
+                label = sample['label'].item()
+                if label > 0 and cancer_idx is None:
+                    cancer_idx = i
+                elif label == 0 and control_idx is None:
+                    control_idx = i
+                
+                if cancer_idx is not None and control_idx is not None:
+                    break
+        
+        if cancer_idx is not None:
+            cancer_sample = dataset[cancer_idx]
+            cancer_length = len(cancer_sample['tokens'])
+            cancer_label = cancer_sample['label'].item()
+            print(f"    Cancer case (idx={cancer_idx}, label={cancer_label}): sequence length = {cancer_length}")
+        else:
+            print(f"    No cancer case found in first 100 samples")
+        
+        if control_idx is not None:
+            control_sample = dataset[control_idx]
+            control_length = len(control_sample['tokens'])
+            print(f"    Control case (idx={control_idx}): sequence length = {control_length}")
+        else:
+            print(f"    No control case found in first 100 samples")
+    
+    print("\n  Expected behavior:")
+    print("    - Cancer cases should have DECREASING sequence lengths as cutoff_months decreases")
+    print("    - Control cases should have SAME sequence length regardless of cutoff_months")
+    print("    - cutoff_months=None should show the full timeline")
 
     print("\n--- Verification Script Finished ---")

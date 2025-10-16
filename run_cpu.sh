@@ -24,7 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.data.unified_dataset 
+python -m src.data.unified_dataloader 
 
 echo "Pipeline finished."
 deactivate
