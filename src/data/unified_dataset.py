@@ -64,7 +64,16 @@ class UnifiedEHRDataset(Dataset):
         for file_path in tqdm(pkl_files, desc=f"Loading data from {data_dir}"):
             with open(file_path, 'rb') as f:
                 records.extend(pickle.load(f))
-        return records
+
+        filtered_records = [
+            record for record in records if record['id'] in self.subject_to_label
+        ]
+        
+        num_dropped = len(all_records) - len(filtered_records)
+        if num_dropped > 0:
+            print(f"WARNING: Dropped {num_dropped} records because no corresponding label was found.")
+            
+        return filtered_records
 
     def _translate_token(self, token_string):
         # This logic is the same as our narrative generator
