@@ -131,6 +131,9 @@ def main(config_path: str):
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
+        metric_for_best_model="loss",
+        greater_is_better=False,
+        save_total_limit=1,
         report_to="wandb",
         run_name=run_name,
     )

@@ -25,7 +25,10 @@ class UnifiedEHRDataset(Dataset):
         # Load all necessary mappings and lookup tables
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
         # Load the patient records from the .pkl files for the specified split
-        self.patient_records = self._load_data(os.path.join(data_dir, split))
+        if split == 'val':
+            self.patient_records = self._load_data(os.path.join(data_dir, split), limit=2)
+        else:
+            self.patient_records = self._load_data(os.path.join(data_dir, split))
 
     def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""

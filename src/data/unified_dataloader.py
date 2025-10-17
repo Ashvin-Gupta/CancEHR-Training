@@ -184,7 +184,7 @@ if __name__ == '__main__':
             print(f"    No control case found in first 100 samples")
     
     print("\n  Expected behavior:")
-    print("    - Cancer cases should have DECREASING sequence lengths as cutoff_months decreases")
+    print("    - Cancer cases should have DECREASING sequence lengths as cutoff_months INCREASES")
     print("    - Control cases should have SAME sequence length regardless of cutoff_months")
     print("    - cutoff_months=None should show the full timeline")
 
