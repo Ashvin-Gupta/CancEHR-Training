@@ -65,13 +65,13 @@ class UnifiedEHRDataset(Dataset):
             with open(file_path, 'rb') as f:
                 records.extend(pickle.load(f))
 
-        filtered_records = [
-            record for record in records if record['id'] in self.subject_to_label
-        ]
+        # filtered_records = [
+        #     record for record in records if record['id'] in self.subject_to_label
+        # ]
         
-        num_dropped = len(all_records) - len(filtered_records)
-        if num_dropped > 0:
-            print(f"WARNING: Dropped {num_dropped} records because no corresponding label was found.")
+        # num_dropped = len(all_records) - len(filtered_records)
+        # if num_dropped > 0:
+        #     print(f"WARNING: Dropped {num_dropped} records because no corresponding label was found.")
             
         return filtered_records
 

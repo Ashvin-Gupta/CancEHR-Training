@@ -35,12 +35,20 @@ class TokenizedDatasetWrapper(Dataset):
         self.base_dataset = base_dataset
         self.tokenizer = tokenizer
         self.max_length = max_length
+
+        print(f"Filtering valid samples from {len(base_dataset)} total samples...")
+        self.valid_indices = []
+        for idx in range(len(base_dataset)):
+            if base_dataset[idx] is not None:
+                self.valid_indices.append(idx)
+        print(f"Found {len(self.valid_indices)} valid samples out of {len(base_dataset)} total samples.")
     
     def __len__(self):
-        return len(self.base_dataset)
+        return len(self.valid_indices)
     
     def __getitem__(self, idx):
-        item = self.base_dataset[idx]
+        actual_idx = self.valid_indices[idx]
+        item = self.base_dataset[actual_idx]
         if item is None:
             return None
         
