@@ -25,7 +25,7 @@ class UnifiedEHRDataset(Dataset):
         # Load all necessary mappings and lookup tables
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
         # Load the patient records from the .pkl files for the specified split
-        if split == 'val':
+        if split == 'tuning':
             self.patient_records = self._load_data(os.path.join(data_dir, split), limit=2)
         else:
             self.patient_records = self._load_data(os.path.join(data_dir, split))
@@ -64,14 +64,6 @@ class UnifiedEHRDataset(Dataset):
         for file_path in tqdm(pkl_files, desc=f"Loading data from {data_dir}"):
             with open(file_path, 'rb') as f:
                 records.extend(pickle.load(f))
-
-        # filtered_records = [
-        #     record for record in records if record['id'] in self.subject_to_label
-        # ]
-        
-        # num_dropped = len(all_records) - len(filtered_records)
-        # if num_dropped > 0:
-        #     print(f"WARNING: Dropped {num_dropped} records because no corresponding label was found.")
             
         return records
 
