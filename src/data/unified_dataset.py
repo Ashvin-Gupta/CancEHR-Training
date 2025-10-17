@@ -73,7 +73,7 @@ class UnifiedEHRDataset(Dataset):
         # if num_dropped > 0:
         #     print(f"WARNING: Dropped {num_dropped} records because no corresponding label was found.")
             
-        return filtered_records
+        return records
 
     def _translate_token(self, token_string):
         # This logic is the same as our narrative generator
