@@ -6,6 +6,9 @@ __pycache__/
 # HPC files
 HPC_Files/
 
+# Weights and Biases
+wandb/
+
 # C extensions
 *.so
 
