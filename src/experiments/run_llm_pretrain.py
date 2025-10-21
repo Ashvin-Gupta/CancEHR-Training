@@ -154,7 +154,8 @@ def main(config_path: str):
     if os.path.exists(token_file):
         try:
             with open(token_file, 'r') as f:
-                hf_token = f.read().strip()
+                line = f.readline().strip()
+                hf_token = line.split('=')[1].strip('"')
                 if hf_token:
                     print(f"Loaded HuggingFace token from {token_file}: {hf_token}")
         except Exception as e:
