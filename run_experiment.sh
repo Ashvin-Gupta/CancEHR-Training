@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd                 
 #$ -pe smp 16
-#$ -l h_rt=24:0:0
+#$ -l h_rt=1:0:0
 #$ -l h_vmem=1G
 #$ -l gpu=2
 #$ -j n
@@ -30,7 +30,7 @@ echo "Starting experiment from directory: $(pwd)"
 #    --experiment_name exp_001 
 
 python -m src.experiments.run_hf_finetune \
-   --config_filepath src/experiments/configs/fine-tune-bert.yaml 
+   --config_filepath src/experiments/configs/fine-tune-bert2.yaml 
 
 echo "Pipeline finished."
 deactivate
