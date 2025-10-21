@@ -13,15 +13,17 @@ class UnifiedEHRDataset(Dataset):
     This 'smart' dataset can:
     1.  Provide data as integer tokens for custom models ('tokens' format).
     2.  Provide data as natural language text for LLM fine-tuning ('text' format).
-    3.  Dynamically truncate patient timelines based on a specified cutoff window
+    3.  Provide data for LLM continued pretraining with random window sampling ('pretrain' format).
+    4.  Dynamically truncate patient timelines based on a specified cutoff window
         before the cancer diagnosis date.
     """
     def __init__(self, data_dir, vocab_file, labels_file, medical_lookup_file, lab_lookup_file,
-                 cutoff_months=None, max_sequence_length=512, format='tokens', split='train'):
+                 cutoff_months=None, max_sequence_length=512, format='tokens', split='train', tokenizer=None):
         
         self.format = format
         self.cutoff_months = cutoff_months
         self.max_sequence_length = max_sequence_length
+        self.tokenizer = tokenizer  # Store for pretrain format
         
         # Load all necessary mappings and lookup tables
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
@@ -37,7 +39,7 @@ class UnifiedEHRDataset(Dataset):
         vocab_df = pd.read_csv(vocab_file)
         self.id_to_token_map = pd.Series(vocab_df['str'].values, index=vocab_df['token']).to_dict()
 
-        if self.format == 'text':
+        if self.format == 'text' or self.format == 'pretrain':
             medical_df = pd.read_csv(medical_lookup_file)
             self.medical_lookup = pd.Series(medical_df['term'].values, index=medical_df['code'].astype(str).str.upper()).to_dict()
             
@@ -134,10 +136,18 @@ class UnifiedEHRDataset(Dataset):
         
         # --- DYNAMIC TIME TRUNCATION ---
         # Truncate the patient timeline based on the cancer diagnosis date and the cutoff months
-        if self.cutoff_months is not None and label > 0: 
+        # For pretrain format: always apply 1-month cutoff for cancer patients
+        if self.format == 'pretrain' and label > 0:
+            actual_cutoff = 1  # Always 1 month for pretraining
+        elif self.cutoff_months is not None and label > 0:
+            actual_cutoff = self.cutoff_months
+        else:
+            actual_cutoff = None
+        
+        if actual_cutoff is not None and label > 0:
             cancer_date = self.subject_to_cancer_date.get(subject_id)
             if pd.notna(cancer_date):
-                cutoff_date = cancer_date - pd.DateOffset(months=self.cutoff_months)
+                cutoff_date = cancer_date - pd.DateOffset(months=actual_cutoff)
                 cutoff_timestamp = cutoff_date.timestamp()
                 
                 truncated_ids = []
@@ -167,6 +177,34 @@ class UnifiedEHRDataset(Dataset):
             return {
                 "text": narrative,
                 "label": torch.tensor(label, dtype=torch.long)
+            }
+        elif self.format == 'pretrain':
+            # Generate full narrative (with 1-month cutoff already applied to token_ids)
+            string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
+            translated_phrases = [self._translate_token(code) for code in string_codes]
+            full_narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
+            
+            # Tokenize the full narrative to get token count
+            if self.tokenizer is None:
+                raise ValueError("tokenizer must be provided for format='pretrain'")
+            
+            full_tokenized = self.tokenizer(full_narrative, truncation=False, add_special_tokens=False)
+            full_token_ids = full_tokenized["input_ids"]
+            
+            # If sequence is longer than max_sequence_length, randomly sample a window
+            if len(full_token_ids) > self.max_sequence_length:
+                # Random start index (Nightingale-style)
+                max_start = len(full_token_ids) - self.max_sequence_length
+                start_idx = random.randint(0, max_start)
+                sampled_token_ids = full_token_ids[start_idx:start_idx + self.max_sequence_length]
+            else:
+                # Use full sequence if shorter than max_sequence_length
+                sampled_token_ids = full_token_ids
+            
+            return {
+                "input_ids": sampled_token_ids,
+                "label": label,  # Stored but not used in pretraining
+                "subject_id": subject_id
             }
         else:
             raise ValueError(f"Invalid format specified: {self.format}")

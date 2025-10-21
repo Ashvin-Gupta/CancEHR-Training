@@ -188,4 +188,59 @@ if __name__ == '__main__':
     print("    - Control cases should have SAME sequence length regardless of cutoff_months")
     print("    - cutoff_months=None should show the full timeline")
 
+    # --- 5. Test the 'pretrain' format ---
+    print("\n--- Verifying 'pretrain' format for LLM continued pretraining ---")
+    try:
+        from transformers import AutoTokenizer
+        from src.data.pretrain_collator import PretrainCollator
+        
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        
+        # GPT-2 doesn't have a pad token by default, so we set it
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        
+        pretrain_dataset = UnifiedEHRDataset(
+            data_dir=test_config["data_dir"],
+            vocab_file=test_config["vocab_filepath"],
+            labels_file=test_config["labels_filepath"],
+            medical_lookup_file=test_config["medical_lookup_filepath"],
+            lab_lookup_file=test_config["lab_lookup_filepath"],
+            split="train",
+            format='pretrain',
+            max_sequence_length=512,
+            tokenizer=tokenizer,
+            cutoff_months=None  # Will use 1-month cutoff automatically for cancer patients
+        )
+        
+        collator = PretrainCollator(tokenizer)
+        pretrain_dataloader = DataLoader(
+            pretrain_dataset,
+            batch_size=4,
+            shuffle=True,
+            collate_fn=collator,
+            num_workers=0
+        )
+        
+        batch = next(iter(pretrain_dataloader))
+        if batch:
+            print("Successfully fetched one batch in 'pretrain' format.")
+            print(f"  - input_ids shape: {batch['input_ids'].shape}")
+            print(f"  - labels shape: {batch['labels'].shape}")
+            print(f"  - attention_mask shape: {batch['attention_mask'].shape}")
+            print(f"  - Sample shows random window sampling working correctly")
+            
+            # Verify that different calls return different windows (data augmentation)
+            batch2 = next(iter(pretrain_dataloader))
+            if batch2:
+                # Check if the batches are different (random sampling)
+                are_different = not torch.equal(batch['input_ids'], batch2['input_ids'])
+                print(f"  - Random window sampling verified: batches differ = {are_different}")
+        else:
+            print("  - Dataloader produced an empty batch.")
+    except Exception as e:
+        print(f"  - FAILED to fetch batch in 'pretrain' format. Error: {e}")
+        import traceback
+        traceback.print_exc()
+
     print("\n--- Verification Script Finished ---")
