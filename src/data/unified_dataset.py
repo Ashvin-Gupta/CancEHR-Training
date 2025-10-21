@@ -57,10 +57,14 @@ class UnifiedEHRDataset(Dataset):
         self.subject_to_cancer_date = pd.Series(labels_df['cancerdate'].values, index=labels_df['subject_id']).to_dict()
 
 
-    def _load_data(self, data_dir):
-        """Loads all patient records from .pkl files in a directory."""
+    def _load_data(self, data_dir, limit=None):
+        """Loads a limited number of patient records from .pkl files in a directory."""
         records = []
         pkl_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.pkl')]
+
+        if limit is not None:
+            pkl_files = pkl_files[:limit]
+
         for file_path in tqdm(pkl_files, desc=f"Loading data from {data_dir}"):
             with open(file_path, 'rb') as f:
                 records.extend(pickle.load(f))
