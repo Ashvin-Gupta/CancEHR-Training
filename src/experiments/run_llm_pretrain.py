@@ -163,7 +163,20 @@ def main(config_path: str):
         print(f"No API keys file found at {token_file}")
     
     print(f"Run name: {run_name}")
-    
+
+     # Set up Hugging Face login
+    api_keys_path = os.path.join("src", "resources", "API_Keys.txt")
+    if os.path.exists(api_keys_path):
+        try:
+            with open(api_keys_path, 'r') as f:
+                hf_token = f.read().strip()
+                if hf_token:
+                    print(f"Loaded HuggingFace token from {api_keys_path}")
+        except Exception as e:
+            print(f"Failed to read token from {api_keys_path}: {e}")
+    else:
+        print(f"No API keys file found at {api_keys_path}")
+        
     # 3. Load Tokenizer
     print(f"\nLoading tokenizer: {model_config['model_name']}")
     tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'], token=hf_token)
