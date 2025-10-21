@@ -4,6 +4,7 @@ import pandas as pd
 import pickle
 import os
 from tqdm import tqdm
+import random
 
 class UnifiedEHRDataset(Dataset):
     """
@@ -25,10 +26,10 @@ class UnifiedEHRDataset(Dataset):
         # Load all necessary mappings and lookup tables
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
         # Load the patient records from the .pkl files for the specified split
-        if split == 'tuning':
-            self.patient_records = self._load_data(os.path.join(data_dir, split), limit=2)
+        if split == 'tuning' or split == 'held_out':
+            self.patient_records = self._load_data(data_dir, split, limit=2)
         else:
-            self.patient_records = self._load_data(os.path.join(data_dir, split))
+            self.patient_records = self._load_data(data_dir, split, limit=20)
 
     def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""
@@ -57,13 +58,18 @@ class UnifiedEHRDataset(Dataset):
         self.subject_to_cancer_date = pd.Series(labels_df['cancerdate'].values, index=labels_df['subject_id']).to_dict()
 
 
-    def _load_data(self, data_dir, limit=None):
+    def _load_data(self, data_dir, split, limit=None, seed=42):
         """Loads a limited number of patient records from .pkl files in a directory."""
+        data_dir = os.path.join(data_dir, split)
         records = []
         pkl_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.pkl')]
 
         if limit is not None:
-            pkl_files = pkl_files[:limit]
+            if split == 'train':
+                random.seed(seed)
+                pkl_files = random.sample(pkl_files, min(limit, len(pkl_files)))
+            else:
+                pkl_files = pkl_files[:limit]
 
         for file_path in tqdm(pkl_files, desc=f"Loading data from {data_dir}"):
             with open(file_path, 'rb') as f:
