@@ -24,7 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.data.unified_dataloader 
+python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
 
 echo "Pipeline finished."
 deactivate
