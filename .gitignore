@@ -6,6 +6,9 @@ __pycache__/
 # HPC files
 HPC_Files/
 
+# API Keys
+src/resources/API_Keys.txt
+
 # Weights and Biases
 wandb/
 

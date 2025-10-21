@@ -140,7 +140,7 @@ def main(config_path: str):
     data_config = config['data']
     training_config = config['training']
     
-    # 2. Set up WandB (optional)
+    # 2. Set up WandB and hugging face token
     wandb_config = config.get('wandb', {})
     if wandb_config.get('enabled', False):
         os.environ["WANDB_PROJECT"] = wandb_config.get("project", "ehr-llm-pretraining")
@@ -150,11 +150,23 @@ def main(config_path: str):
         run_name = f"pretrain_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         report_to = "none"
     
+    token_file = os.path.join("src", "resources", "API_Keys.txt")
+    if os.path.exists(token_file):
+        try:
+            with open(token_file, 'r') as f:
+                hf_token = f.read().strip()
+                if hf_token:
+                    print(f"Loaded HuggingFace token from {token_file}: {hf_token}")
+        except Exception as e:
+            print(f"Failed to read token from {token_file}: {e}")
+    else:
+        print(f"No API keys file found at {token_file}")
+    
     print(f"Run name: {run_name}")
     
     # 3. Load Tokenizer
     print(f"\nLoading tokenizer: {model_config['model_name']}")
-    tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
+    tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'], token=hf_token)
     
     # Set pad token if not present
     if tokenizer.pad_token is None:
@@ -223,6 +235,7 @@ def main(config_path: str):
     model = AutoModelForCausalLM.from_pretrained(
         model_config['model_name'],
         torch_dtype=torch.bfloat16 if training_config.get('use_bf16', False) else torch.float32,
+        token=hf_token,
     )
     
     print(f"  - Model parameters: {model.num_parameters():,}")

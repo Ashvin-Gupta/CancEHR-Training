@@ -123,7 +123,7 @@ def main(config_path: str):
     print(f"Loading model: {model_config['model_name']}")
     model = AutoModelForSequenceClassification.from_pretrained(
         model_config['model_name'], 
-        num_labels=model_config['num_classes']
+        num_labels=model_config['num_classes'],
     )
 
     # 6. Set Up the Trainer from Hugging Face not custom trainer
