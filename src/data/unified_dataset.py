@@ -61,6 +61,8 @@ class UnifiedEHRDataset(Dataset):
     def _load_data(self, data_dir, split, limit=None, seed=42):
         """Loads a limited number of patient records from .pkl files in a directory."""
         data_dir = os.path.join(data_dir, split)
+        if split == 'tuning':
+            data_dir = '/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/tuning'
         records = []
         pkl_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.pkl')]
 
