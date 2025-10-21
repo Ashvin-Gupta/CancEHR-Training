@@ -11,30 +11,21 @@ class PretrainCollator:
         self.pad_to_multiple_of = pad_to_multiple_of
     
     def __call__(self, batch):
-        # Filter out None values
         batch = [item for item in batch if item is not None]
         if not batch:
             return None
         
-        # Extract input_ids from each sample
-        input_ids = [torch.tensor(item["input_ids"], dtype=torch.long) for item in batch]
+        # All sequences are exactly max_sequence_length, so just stack
+        input_ids = torch.stack([torch.tensor(item["input_ids"], dtype=torch.long) for item in batch])
         
-        # Pad sequences to the same length
-        input_ids_padded = torch.nn.utils.rnn.pad_sequence(
-            input_ids, 
-            batch_first=True, 
-            padding_value=self.tokenizer.pad_token_id
-        )
+        # No padding needed, so all tokens are valid
+        attention_mask = torch.ones_like(input_ids)
         
-        # Create attention mask (1 for real tokens, 0 for padding)
-        attention_mask = (input_ids_padded != self.tokenizer.pad_token_id).long()
-        
-        # For causal LM: labels = input_ids, but mask out padding in loss computation
-        labels = input_ids_padded.clone()
-        labels[labels == self.tokenizer.pad_token_id] = -100  # -100 is ignored by CrossEntropyLoss
+        # Labels = input_ids for causal LM
+        labels = input_ids.clone()
         
         return {
-            "input_ids": input_ids_padded,
+            "input_ids": input_ids,
             "attention_mask": attention_mask,
             "labels": labels
         }

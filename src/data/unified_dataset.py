@@ -179,31 +179,28 @@ class UnifiedEHRDataset(Dataset):
                 "label": torch.tensor(label, dtype=torch.long)
             }
         elif self.format == 'pretrain':
-            # Generate full narrative (with 1-month cutoff already applied to token_ids)
             string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
             translated_phrases = [self._translate_token(code) for code in string_codes]
             full_narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
             
-            # Tokenize the full narrative to get token count
             if self.tokenizer is None:
                 raise ValueError("tokenizer must be provided for format='pretrain'")
             
             full_tokenized = self.tokenizer(full_narrative, truncation=False, add_special_tokens=False)
             full_token_ids = full_tokenized["input_ids"]
             
-            # If sequence is longer than max_sequence_length, randomly sample a window
-            if len(full_token_ids) > self.max_sequence_length:
-                # Random start index (Nightingale-style)
-                max_start = len(full_token_ids) - self.max_sequence_length
-                start_idx = random.randint(0, max_start)
-                sampled_token_ids = full_token_ids[start_idx:start_idx + self.max_sequence_length]
-            else:
-                # Use full sequence if shorter than max_sequence_length
-                sampled_token_ids = full_token_ids
+            # Skip patients that are too short (like Nightingale does at load time)
+            if len(full_token_ids) < self.max_sequence_length:
+                return None  # Will be filtered out by collator
+            
+            # Now we ALWAYS sample exactly max_sequence_length tokens
+            max_start = len(full_token_ids) - self.max_sequence_length
+            start_idx = random.randint(0, max_start)
+            sampled_token_ids = full_token_ids[start_idx:start_idx + self.max_sequence_length]
             
             return {
                 "input_ids": sampled_token_ids,
-                "label": label,  # Stored but not used in pretraining
+                "label": label,
                 "subject_id": subject_id
             }
         else:
