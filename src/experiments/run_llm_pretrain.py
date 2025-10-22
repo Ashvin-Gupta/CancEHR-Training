@@ -165,7 +165,7 @@ def main(config_path: str):
         print(f"No API keys file found at {token_file}")
     
     print(f"Run name: {run_name}")
-    print(type(hf_token))
+    
     login(token=str(hf_token))
 
     # 3. Load Tokenizer
