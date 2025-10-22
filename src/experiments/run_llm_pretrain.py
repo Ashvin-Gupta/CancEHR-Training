@@ -144,11 +144,11 @@ def main(config_path: str):
         load_in_4bit = training_config.get('load_in_4bit', True), # Use 4-bit quantization
     )
 
-     model = FastLanguageModel.get_peft_model(
+    model = FastLanguageModel.get_peft_model(
         model,
         r = training_config.get('lora_r', 16),
         target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                          "gate_proj", "up_proj", "down_proj"], # Modules for Mistral/Llama
+                            "gate_proj", "up_proj", "down_proj"], # Modules for Mistral/Llama
         lora_alpha = training_config.get('lora_alpha', 16),
         lora_dropout = 0,
         bias = "none",
