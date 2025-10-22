@@ -253,7 +253,7 @@ def main(config_path: str):
         item = train_base_dataset[i]
         if item is not None:
             print(f"\n--- PATIENT {i} ---")
-            print(f"{item['text'][:1000]}...") # Print first 1000 chars
+            print(f"{item['text'][-1000:]}...") # Print last 1000 chars
             count += 1
     
     # # 5. Create CLM Datasets
