@@ -19,6 +19,9 @@ import os
 from datetime import datetime
 import wandb
 
+from unsloth import FastLanguageModel
+from trl import SFTTrainer
+
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -79,26 +82,62 @@ class TextDatasetForCLM:
             "input_ids": tokenized["input_ids"]
         }
 
+class TextDatasetForSFT:
+    """
+    Wraps UnifiedEHRDataset (text format) for TRL's SFTTrainer.
+    The SFTTrainer expects a dataset that returns a dictionary with a key 'text'.
+    It will handle all tokenization and packing internally.
+    """
+    def __init__(self, base_dataset, tokenizer, add_eos=True):
+        self.base_dataset = base_dataset
+        self.tokenizer = tokenizer
+        self.add_eos = add_eos
+        self.eos_token = self.tokenizer.eos_token if self.tokenizer.eos_token else ""
+        
+        # Pre-filter valid samples
+        print(f"Filtering valid samples from {len(base_dataset)} patients...")
+        self.valid_indices = []
+        for i in range(len(base_dataset)):
+            item = base_dataset[i]
+            if item is not None:
+                self.valid_indices.append(i)
+        print(f"  - Found {len(self.valid_indices)} valid patients")
+    
+    def __len__(self):
+        return len(self.valid_indices)
+    
+    def __getitem__(self, idx):
+        # Get the actual patient record
+        actual_idx = self.valid_indices[idx]
+        item = self.base_dataset[actual_idx]
+        
+        # Add EOS token as separator between patients
+        text = item['text']
+        if self.add_eos:
+            text = text + self.eos_token
+        
+        # Return a dictionary with the key SFTTrainer expects
+        return {"text": text}
 
-def create_text_generator(dataset, tokenizer, add_eos=True):
-    """
-    Creates a generator that yields patient narratives with optional EOS tokens.
+# def create_text_generator(dataset, tokenizer, add_eos=True):
+#     """
+#     Creates a generator that yields patient narratives with optional EOS tokens.
     
-    Args:
-        dataset: UnifiedEHRDataset in 'text' format
-        tokenizer: HuggingFace tokenizer
-        add_eos: Whether to add EOS token between patients (recommended)
+#     Args:
+#         dataset: UnifiedEHRDataset in 'text' format
+#         tokenizer: HuggingFace tokenizer
+#         add_eos: Whether to add EOS token between patients (recommended)
     
-    Yields:
-        Patient narratives as strings
-    """
-    eos_token = tokenizer.eos_token if add_eos else ""
+#     Yields:
+#         Patient narratives as strings
+#     """
+#     eos_token = tokenizer.eos_token if add_eos else ""
     
-    for i in range(len(dataset)):
-        item = dataset[i]
-        if item is not None:
-            # Yield patient narrative with separator
-            yield item['text'] + eos_token
+#     for i in range(len(dataset)):
+#         item = dataset[i]
+#         if item is not None:
+#             # Yield patient narrative with separator
+#             yield item['text'] + eos_token
 
 
 def create_clm_dataset(base_dataset, tokenizer, max_length):
@@ -168,17 +207,17 @@ def main(config_path: str):
     
     login(token=str(hf_token))
 
-    # 3. Load Tokenizer
-    print(f"\nLoading tokenizer: {model_config['model_name']}")
-    tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'], token=hf_token)
+    # # 3. Load Tokenizer
+    # print(f"\nLoading tokenizer: {model_config['model_name']}")
+    # tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'], token=hf_token)
     
-    # Set pad token if not present
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        print(f"  - Set pad_token to eos_token: '{tokenizer.eos_token}'")
+    # # Set pad token if not present
+    # if tokenizer.pad_token is None:
+    #     tokenizer.pad_token = tokenizer.eos_token
+    #     print(f"  - Set pad_token to eos_token: '{tokenizer.eos_token}'")
     
-    print(f"  - Vocabulary size: {len(tokenizer)}")
-    print(f"  - EOS token: '{tokenizer.eos_token}' (id: {tokenizer.eos_token_id})")
+    # print(f"  - Vocabulary size: {len(tokenizer)}")
+    # print(f"  - EOS token: '{tokenizer.eos_token}' (id: {tokenizer.eos_token_id})")
     
     # 4. Create Base Datasets (text format)
     print("\n" + "=" * 80)
@@ -203,27 +242,40 @@ def main(config_path: str):
     print("\nLoading validation data...")
     val_base_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
     print(f"  - Loaded {len(val_base_dataset)} validation patients")
-    
-    # 5. Create CLM Datasets
+
     print("\n" + "=" * 80)
-    print("Creating datasets for causal language modeling...")
+    print("Verifying data - First 3 patient narratives:")
     print("=" * 80)
-
-    print("\nWrapping training data...")
-    train_dataset = create_clm_dataset(
-        train_base_dataset, 
-        tokenizer, 
-        config['model']['max_length']
-    )
-
-    print("\nWrapping validation data...")
-    val_dataset = create_clm_dataset(
-        val_base_dataset, 
-        tokenizer, 
-        config['model']['max_length']
-    )
+    count = 0
+    for i in range(len(train_base_dataset)):
+        if count >= 3:
+            break
+        item = train_base_dataset[i]
+        if item is not None:
+            print(f"\n--- PATIENT {i} (ID: {train_base_dataset.patient_records[i]['id']}) ---")
+            print(f"{item['text'][:1000]}...") # Print first 1000 chars
+            count += 1
     
-    # 6. Load Model
+    # # 5. Create CLM Datasets
+    # print("\n" + "=" * 80)
+    # print("Creating datasets for causal language modeling...")
+    # print("=" * 80)
+
+    # print("\nWrapping training data...")
+    # train_dataset = create_clm_dataset(
+    #     train_base_dataset, 
+    #     tokenizer, 
+    #     config['model']['max_length']
+    # )
+
+    # print("\nWrapping validation data...")
+    # val_dataset = create_clm_dataset(
+    #     val_base_dataset, 
+    #     tokenizer, 
+    #     config['model']['max_length']
+    # )
+    
+    # 6. Load Model with Unsloth
     print("\n" + "=" * 80)
     print(f"Loading model: {model_config['model_name']}")
     print("=" * 80)
@@ -236,15 +288,42 @@ def main(config_path: str):
         device = "cpu"
         print(f"  - CUDA not available, using CPU")
     
-    model = AutoModelForCausalLM.from_pretrained(
-        model_config['model_name'],
-        torch_dtype=torch.bfloat16 if training_config.get('use_bf16', False) else torch.float32,
-        token=hf_token,
+    # model = AutoModelForCausalLM.from_pretrained(
+    #     model_config['model_name'],
+    #     torch_dtype=torch.bfloat16 if training_config.get('use_bf16', False) else torch.float32,
+    #     token=hf_token,
+    # )
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name = model_config['model_name'],
+        max_seq_length = model_config['max_length'],
+        dtype = None, # Auto-detects (e.g., bfloat16)
+        load_in_4bit = training_config.get('load_in_4bit', True), # Use 4-bit quantization
     )
+
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r = training_config.get('lora_r', 16),
+        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                          "gate_proj", "up_proj", "down_proj"], # Modules for Mistral/Llama
+        lora_alpha = training_config.get('lora_alpha', 16),
+        lora_dropout = 0,
+        bias = "none",
+        use_gradient_checkpointing = training_config.get('gradient_checkpointing', True),
+        random_state = 42,
+    )
+    print("  - Applied LoRA adapters (PEFT) to the model.")
     
-    print(f"  - Model parameters: {model.num_parameters():,}")
-    print(f"  - Model dtype: {model.dtype}")
-    print(f"  - Target device: {device}")
+    # print(f"  - Model parameters: {model.num_parameters():,}")
+    # print(f"  - Model dtype: {model.dtype}")
+    # print(f"  - Target device: {device}")
+
+    print("\n" + "=" * 80)
+    print("Creating SFT datasets...")
+    print("=" * 80)
+
+    train_dataset = TextDatasetForSFT(train_base_dataset, tokenizer, add_eos=True)
+    val_dataset = TextDatasetForSFT(val_base_dataset, tokenizer, add_eos=True)
+
     
     # 7. Set Up Training Arguments
     print("\n" + "=" * 80)
@@ -276,7 +355,7 @@ def main(config_path: str):
         metric_for_best_model="loss" if val_dataset else None,
         
         # Performance
-        fp16=training_config.get('fp16', False),
+        fp16=not training_config.get('fp16', False),
         bf16=training_config.get('bf16', False),
         gradient_accumulation_steps=training_config.get('gradient_accumulation_steps', 1),
         gradient_checkpointing=training_config.get('gradient_checkpointing', False),
@@ -296,20 +375,20 @@ def main(config_path: str):
     print(f"  - Gradient accumulation steps: {training_args.gradient_accumulation_steps}")
     print(f"  - FP16: {training_args.fp16}, BF16: {training_args.bf16}")
     
-    # 8. Create Data Collator (handles batching and label creation)
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False,  # Causal LM, not masked LM
-    )
+    # # 8. Create Data Collator (handles batching and label creation)
+    # data_collator = DataCollatorForLanguageModeling(
+    #     tokenizer=tokenizer,
+    #     mlm=False,  # Causal LM, not masked LM
+    # )
     
-    # 9. Create Trainer
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=val_dataset if val_dataset else None,
-        data_collator=data_collator,
-    )
+    # # 9. Create Trainer
+    # trainer = Trainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=train_dataset,
+    #     eval_dataset=val_dataset if val_dataset else None,
+    #     data_collator=data_collator,
+    # )
     
     # 10. Train
     print("\n" + "=" * 80)
@@ -325,7 +404,7 @@ def main(config_path: str):
     
     final_model_path = os.path.join(training_config['output_dir'], "final_model")
     trainer.save_model(final_model_path)
-    tokenizer.save_pretrained(final_model_path)
+    # tokenizer.save_pretrained(final_model_path)
     
     print(f"  - Model saved to: {final_model_path}")
     

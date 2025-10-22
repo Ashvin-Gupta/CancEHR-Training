@@ -3,15 +3,16 @@
 name: "ehr_llm_pretraining"
 
 model:
-  # Model to pretrain (examples: gpt2, meta-llama/Llama-2-7b-hf, mistralai/Mistral-7B-v0.1)
-  model_name: "meta-llama/Llama-3.1-8B"
+  # Model to pretrain (examples: gpt2, meta-llama/Llama-2-7b-hf, mistralai/Mistral-7B-v0.1, unsloth/llama-3-8b-bnb-4bit)
+  model_name: "unsloth/llama-3-8b-bnb-4bit"
+
   max_length: 2048  # Context window for sequence packing
   hf_token: null 
 
 wandb:
   enabled: true
   project: "ehr-llm-pretraining"
-  run_name: "llama3.1-8b-pretrain-1month-cutoff"
+  run_name: "llama3.1-8b-bnb-4bit-pretrain-1month-cutoff"
 
 training:
   output_dir: "/data/scratch/qc25022/upgi/experiments/llm_pretrain"
