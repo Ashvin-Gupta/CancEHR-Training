@@ -32,7 +32,7 @@ training:
   
   # Precision
   fp16: false  # Use FP16 for faster training (if GPU supports it)
-  bf16: false  # Use BF16 for better numerical stability (if GPU supports it)
+  bf16: true  # Use BF16 for better numerical stability (if GPU supports it)
   
   # Logging and saving
   logging_steps: 50
@@ -42,8 +42,8 @@ training:
 
 data:
   cutoff_months: 1  # Remove last 1 month before diagnosis for cancer patients
-  data_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/"
-  vocab_filepath: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv"
+  data_dir: "/data/scratch/qc25022/upgi/tokenised_data/cprd_upgi/"
+  vocab_filepath: "/data/scratch/qc25022/upgi/tokenised_data/cprd_upgi/vocab.csv"
   labels_filepath: "/data/scratch/qc25022/upgi/master_subject_labels.csv"
   medical_lookup_filepath: "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv"
   lab_lookup_filepath: "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv"

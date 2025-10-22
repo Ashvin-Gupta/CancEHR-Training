@@ -28,8 +28,12 @@ from transformers import (
     AutoModelForCausalLM,
     TrainingArguments,
     Trainer,
-    DataCollatorForLanguageModeling
+    DataCollatorForLanguageModeling.
+    TextIteratorStreamer
 )
+from threading import Thread
+import textwrap
+
 import torch
 from huggingface_hub import login
 
@@ -228,7 +232,7 @@ def main(config_path: str):
         # Saving
         save_strategy="steps",
         save_steps=training_config.get('save_steps', 1000),
-        save_total_limit=training_config.get('save_total_limit', 3),
+        save_total_limit=training_config.get('save_total_limit', 2),
         load_best_model_at_end=True if val_dataset else False,
         metric_for_best_model="loss" if val_dataset else None,
         
@@ -299,6 +303,63 @@ def main(config_path: str):
     print("\n" + "=" * 80)
     print("Training Complete!")
     print("=" * 80)
+
+    # 13. Run Inference
+    print("\n" + "=" * 80)
+    print("Running inference test...")
+    print("=" * 80)
+
+    # Set model to evaluation mode
+    model.eval()
+    
+    # Call for_inference() to prepare the model
+    FastLanguageModel.for_inference(model)
+
+    # Define a sample prompt
+    prompt = "AGE_decile, 5, AGE_unit, 5, FEMALE, WHITE, 2, Bmi, 5, Height, 3, Weight, 4, Current Smoker, Universal precautions, Bathing eye, Current Or Ex-Smoker, 4mt-6mt, Blood Pressure, Other soft tissue disorders, Bp Diastolic, 4, Bp Systolic, 0, 30d-2mt, Drug therapy, 7d-12d, Digestive system disease screening, 2mt-4mt, Bp Diastolic, 7, Bp Systolic, 6, Universal precautions, Asthma trigger, Assessment scales, 1, Respiratory flow rate, 7, Drug therapy, Mental/developmental handicap screening, Assessment scales, Immunisation status screening, Asthma, Lung and mediastinum operations, Other respiratory disease monitoring, Respiratory disease monitoring, Education, Procedure on respiratory system, Medication management"
+    print(f"PROMPT: {prompt}\n")
+    print("MODEL OUTPUT:")
+
+    # Setup the streamer
+    text_streamer = TextIteratorStreamer(tokenizer, skip_prompt=True)
+    max_print_width = 100 # For text wrapping
+
+    inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
+
+    generation_kwargs = dict(
+        inputs,
+        streamer=text_streamer,
+        max_new_tokens=256, # Generate 256 new tokens
+        use_cache=True,
+    )
+    
+    # Start generation in a separate thread
+    thread = Thread(target=model.generate, kwargs=generation_kwargs)
+    thread.start()
+
+    # Print the output as it streams
+    length = 0
+    for j, new_text in enumerate(text_streamer):
+        if j == 0:
+            wrapped_text = textwrap.wrap(new_text, width=max_print_width)
+            length = len(wrapped_text[-1]) if wrapped_text else 0
+            wrapped_text = "\n".join(wrapped_text)
+            print(wrapped_text, end="")
+        else:
+            length += len(new_text)
+            if length >= max_print_width:
+                # Find the last space to wrap nicely
+                wrap_point = new_text.rfind(' ', 0, max_print_width - (length - len(new_text)))
+                if wrap_point != -1:
+                    print(new_text[:wrap_point] + "\n" + new_text[wrap_point+1:], end="")
+                    length = len(new_text[wrap_point+1:])
+                else:
+                    print("\n" + new_text, end="")
+                    length = len(new_text)
+            else:
+                print(new_text, end="")
+    
+    print("\n") # Add a final newline
 
 
 if __name__ == "__main__":
