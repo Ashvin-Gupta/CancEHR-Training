@@ -252,7 +252,7 @@ def main(config_path: str):
             break
         item = train_base_dataset[i]
         if item is not None:
-            print(f"\n--- PATIENT {i} (ID: {train_base_dataset.patient_records[i]['id']}) ---")
+            print(f"\n--- PATIENT {i} ---")
             print(f"{item['text'][:1000]}...") # Print first 1000 chars
             count += 1
     
