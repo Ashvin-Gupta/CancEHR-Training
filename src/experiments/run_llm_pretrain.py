@@ -355,8 +355,8 @@ def main(config_path: str):
         metric_for_best_model="loss" if val_dataset else None,
         
         # Performance
-        fp16=not training_config.get('fp16', False),
-        bf16=training_config.get('bf16', False),
+        fp16=training_config.get('fp16', False),
+        bf16=training_config.get('bf16', True),
         gradient_accumulation_steps=training_config.get('gradient_accumulation_steps', 1),
         gradient_checkpointing=training_config.get('gradient_checkpointing', False),
         
