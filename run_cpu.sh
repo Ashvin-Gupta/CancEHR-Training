@@ -1,9 +1,8 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 8
+#$ -pe smp 4
 #$ -l h_rt=1:0:0
-#$ -l h_vmem=24
-#$ -l hihgmem
+#$ -l h_vmem=4G
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_Files/loge/

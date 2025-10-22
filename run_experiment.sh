@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 16
+#$ -pe smp 24
 #$ -l h_rt=1:0:0
 #$ -l h_vmem=1G
-#$ -l gpu=2
+#$ -l gpu=3
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_Files/loge/
