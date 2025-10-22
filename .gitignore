@@ -3,11 +3,17 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Cache files
+unsloth_compiled_cache/
+
 # API keys
 src/resources/API_Keys.txt
 
 # HPC files
 HPC_Files/
+
+# Wandb
+wandb/
 
 # API Keys
 src/resources/API_Keys.txt
