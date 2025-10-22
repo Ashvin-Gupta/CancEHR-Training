@@ -389,6 +389,19 @@ def main(config_path: str):
     #     eval_dataset=val_dataset if val_dataset else None,
     #     data_collator=data_collator,
     # )
+
+    # 7. Create SFTTrainer
+    print("\nInitializing SFTTrainer...")
+    trainer = SFTTrainer(
+        model = model,
+        tokenizer = tokenizer,
+        train_dataset = train_dataset,
+        eval_dataset = val_dataset,
+        dataset_text_field = "text", # Key from our TextDatasetForSFT
+        max_seq_length = model_config['max_length'],
+        args = training_args,
+        packing = True, # --- THIS IS THE EFFICIENT PACKING! ---
+    )
     
     # 10. Train
     print("\n" + "=" * 80)
