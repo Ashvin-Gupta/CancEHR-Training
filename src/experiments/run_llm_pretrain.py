@@ -21,6 +21,7 @@ import wandb
 
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
+from datasets import Dataset
 
 from transformers import (
     AutoTokenizer,
@@ -119,6 +120,22 @@ class TextDatasetForSFT:
         # Return a dictionary with the key SFTTrainer expects
         return {"text": text}
 
+def extract_text(base_dataset, tokenizer):
+        """Extracts all valid text narratives and adds EOS token."""
+        text_list = []
+        # Use eos_token if it exists, otherwise use an empty string
+        eos_token = tokenizer.eos_token if tokenizer.eos_token else ""
+        
+        print(f"  - Processing {len(base_dataset)} patients...")
+        # We iterate through the base_dataset to get the text
+        for i in range(len(base_dataset)):
+            item = base_dataset[i]
+            if item is not None:
+                # item['text'] is the narrative from UnifiedEHRDataset
+                text_list.append(item['text'] + eos_token)
+        print(f"  - Extracted {len(text_list)} valid narratives.")
+        return text_list
+        
 # def create_text_generator(dataset, tokenizer, add_eos=True):
 #     """
 #     Creates a generator that yields patient narratives with optional EOS tokens.
@@ -246,15 +263,22 @@ def main(config_path: str):
     print("\n" + "=" * 80)
     print("Verifying data - First 3 patient narratives:")
     print("=" * 80)
-    count = 0
-    for i in range(len(train_base_dataset)):
-        if count >= 3:
-            break
-        item = train_base_dataset[i]
-        if item is not None:
-            print(f"\n--- PATIENT {i} ---")
-            print(f"{item['text'][-1000:]}...") # Print last 1000 chars
-            count += 1
+    tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
+    train_text_list = extract_text(train_base_dataset, tokenizer)
+    val_text_list = extract_text(val_base_dataset, tokenizer)
+    # print("\nVerifying data - First 3 patient narratives:")
+    for i in range(min(3, len(train_text_list))):
+        print(f"\n--- PATIENT {i} ---")
+        # Print the last 1000 chars, as you had before
+        print(f"{train_text_list[i][-1000:]}...")
+    # for i in range(len(train_base_dataset)):
+    #     if count >= 3:
+    #         break
+    #     item = train_base_dataset[i]
+    #     if item is not None:
+    #         print(f"\n--- PATIENT {i} ---")
+    #         print(f"{item['text'][-1000:]}...") # Print last 1000 chars
+    #         count += 1
     
     # # 5. Create CLM Datasets
     # print("\n" + "=" * 80)
@@ -321,10 +345,12 @@ def main(config_path: str):
     print("Creating SFT datasets...")
     print("=" * 80)
 
-    train_dataset = TextDatasetForSFT(train_base_dataset, tokenizer, add_eos=True)
-    val_dataset = TextDatasetForSFT(val_base_dataset, tokenizer, add_eos=True)
+    # train_dataset = TextDatasetForSFT(train_base_dataset, tokenizer, add_eos=True)
+    # val_dataset = TextDatasetForSFT(val_base_dataset, tokenizer, add_eos=True)
 
-    
+    train_dataset = Dataset.from_list(train_text_list)
+    val_dataset = Dataset.from_list(val_text_list)
+
     # 7. Set Up Training Arguments
     print("\n" + "=" * 80)
     print("Setting up training...")
