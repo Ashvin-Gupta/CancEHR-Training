@@ -132,7 +132,7 @@ def extract_text(base_dataset, tokenizer):
             item = base_dataset[i]
             if item is not None:
                 # item['text'] is the narrative from UnifiedEHRDataset
-                text_list.append(item['text'] + eos_token)
+                text_list.append(item['text'] + ', ' + eos_token)
         print(f"  - Extracted {len(text_list)} valid narratives.")
         return text_list
         
@@ -260,17 +260,7 @@ def main(config_path: str):
     val_base_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
     print(f"  - Loaded {len(val_base_dataset)} validation patients")
 
-    print("\n" + "=" * 80)
-    print("Verifying data - First 3 patient narratives:")
-    print("=" * 80)
-    tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'])
-    train_text_list = extract_text(train_base_dataset, tokenizer)
-    val_text_list = extract_text(val_base_dataset, tokenizer)
-    # print("\nVerifying data - First 3 patient narratives:")
-    for i in range(min(3, len(train_text_list))):
-        print(f"\n--- PATIENT {i} ---")
-        # Print the last 1000 chars, as you had before
-        print(f"{train_text_list[i][-1000:]}...")
+    
     # for i in range(len(train_base_dataset)):
     #     if count >= 3:
     #         break
@@ -324,6 +314,18 @@ def main(config_path: str):
         load_in_4bit = training_config.get('load_in_4bit', True), # Use 4-bit quantization
     )
 
+    print("\n" + "=" * 80)
+    print("Verifying data - First 3 patient narratives:")
+    print("=" * 80)
+    
+    train_text_list = extract_text(train_base_dataset, tokenizer)
+    val_text_list = extract_text(val_base_dataset, tokenizer)
+    # print("\nVerifying data - First 3 patient narratives:")
+    for i in range(min(3, len(train_text_list))):
+        print(f"\n--- PATIENT {i} ---")
+        # Print the last 1000 chars, as you had before
+        print(f"{train_text_list[i][-1000:]}...")
+
     model = FastLanguageModel.get_peft_model(
         model,
         r = training_config.get('lora_r', 16),
@@ -334,6 +336,8 @@ def main(config_path: str):
         bias = "none",
         use_gradient_checkpointing = training_config.get('gradient_checkpointing', True),
         random_state = 42,
+        use_rslora = True,
+        loftq_config = None,
     )
     print("  - Applied LoRA adapters (PEFT) to the model.")
     
@@ -348,8 +352,8 @@ def main(config_path: str):
     # train_dataset = TextDatasetForSFT(train_base_dataset, tokenizer, add_eos=True)
     # val_dataset = TextDatasetForSFT(val_base_dataset, tokenizer, add_eos=True)
 
-    train_dataset = Dataset.from_list(train_text_list)
-    val_dataset = Dataset.from_list(val_text_list)
+    train_dataset = Dataset.from_dict({"text": train_text_list})
+    val_dataset = Dataset.from_dict({"text": val_text_list})
 
     # 7. Set Up Training Arguments
     print("\n" + "=" * 80)
