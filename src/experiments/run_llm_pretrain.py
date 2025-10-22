@@ -27,6 +27,7 @@ from transformers import (
     DataCollatorForLanguageModeling
 )
 import torch
+from huggingface_hub import login
 
 from src.data.unified_dataset import UnifiedEHRDataset
 
@@ -177,7 +178,8 @@ def main(config_path: str):
             print(f"Failed to read token from {api_keys_path}: {e}")
     else:
         print(f"No API keys file found at {api_keys_path}")
-        
+    login(token=hf_token)
+    
     # 3. Load Tokenizer
     print(f"\nLoading tokenizer: {model_config['model_name']}")
     tokenizer = AutoTokenizer.from_pretrained(model_config['model_name'], token=hf_token)
