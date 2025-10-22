@@ -28,7 +28,7 @@ from transformers import (
     AutoModelForCausalLM,
     TrainingArguments,
     Trainer,
-    DataCollatorForLanguageModeling.
+    DataCollatorForLanguageModeling,
     TextIteratorStreamer
 )
 from threading import Thread
