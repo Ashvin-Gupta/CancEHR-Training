@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 24
+#$ -pe smp 8
 #$ -l h_rt=1:0:0
-#$ -l h_vmem=1G
-#$ -l gpu=3
+#$ -l h_vmem=4G
+#$ -l gpu=1
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_Files/loge/
@@ -29,8 +29,7 @@ echo "Starting experiment from directory: $(pwd)"
 #    --config_name cprd_decoder_lstm_test \
 #    --experiment_name exp_001 
 
-python -m src.experiments.run_hf_finetune \
-   --config_filepath src/experiments/configs/fine-tune-bert2.yaml 
+python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
 
 echo "Pipeline finished."
 deactivate
