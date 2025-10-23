@@ -12,7 +12,7 @@ model:
 wandb:
   enabled: true
   project: "ehr-llm-pretraining"
-  run_name: "llama3.1-8b-bnb-4bit-pretrain-1month-cutoff_bs32"
+  run_name: "llama3.1-8b-bnb-4bit-pretrain-1month-cutoff_bs32_few"
 
 training:
   output_dir: "/data/scratch/qc25022/upgi/experiments/llm_pretrain"
