@@ -20,14 +20,14 @@ training:
   
   # Training hyperparameters
   epochs: 3
-  batch_size: 4
+  batch_size: 16
   eval_batch_size: 4
   learning_rate: 5e-5
   weight_decay: 0.01
   warmup_steps: 500
   
   # Gradient settings
-  gradient_accumulation_steps: 4  # Effective batch size = 4 * 4 = 16
+  gradient_accumulation_steps: 1  # Effective batch size = gradient_accumulation_steps * batch_size
   gradient_checkpointing: false  # Set to true for large models to save memory
   
   # Precision
@@ -38,7 +38,7 @@ training:
   logging_steps: 50
   eval_steps: 500
   save_steps: 1000
-  save_total_limit: 1  # Keep only 3 best checkpoints
+  save_total_limit: 1  # Keep only 1 best checkpoint
 
 data:
   cutoff_months: 1  # Remove last 1 month before diagnosis for cancer patients
