@@ -121,7 +121,7 @@ def main(config_path: str):
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name = model_config['model_name'],
         max_seq_length = model_config['max_length'],
-        dtype = None, # Auto-detects (e.g., bfloat16)
+        dtype = torch.float16, # GPU does not support bfloat16
         load_in_4bit = training_config.get('load_in_4bit', True), # Use 4-bit quantization
     )
 
@@ -194,6 +194,8 @@ def main(config_path: str):
     print("=" * 80)
     
     training_args = TrainingArguments(
+        dataloader_num_workers=training_config.get('dataloader_num_workers', 1),
+        
         output_dir=training_config['output_dir'],
         overwrite_output_dir=training_config.get('overwrite_output_dir', True),
         
