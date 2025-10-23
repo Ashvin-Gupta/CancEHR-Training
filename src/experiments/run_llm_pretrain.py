@@ -194,8 +194,8 @@ def main(config_path: str):
     print("=" * 80)
     
     training_args = TrainingArguments(
-        dataloader_num_workers=training_config.get('dataloader_num_workers', 1),
-        
+        dataloader_num_workers=training_config.get('dataloader_num_workers', 8),
+
         output_dir=training_config['output_dir'],
         overwrite_output_dir=training_config.get('overwrite_output_dir', True),
         
