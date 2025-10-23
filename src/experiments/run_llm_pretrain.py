@@ -57,25 +57,6 @@ def extract_text(base_dataset, tokenizer):
         return text_list
         
 
-def create_clm_dataset(base_dataset, tokenizer, max_length):
-    """
-    Creates a dataset for causal language modeling.
-    
-    Args:
-        base_dataset: UnifiedEHRDataset in 'text' format
-        tokenizer: HuggingFace tokenizer
-        max_length: Maximum sequence length
-    
-    Returns:
-        TextDatasetForCLM
-    """
-    return TextDatasetForCLM(
-        base_dataset=base_dataset,
-        tokenizer=tokenizer,
-        max_length=max_length,
-        add_eos=True
-    )
-
 
 def main(config_path: str):
     """
