@@ -12,7 +12,7 @@ model:
 wandb:
   enabled: true
   project: "ehr-llm-pretraining"
-  run_name: "llama3.1-8b-bnb-4bit-pretrain-1month-cutoff"
+  run_name: "llama3.1-8b-bnb-4bit-pretrain-1month-cutoff_bs32"
 
 training:
   output_dir: "/data/scratch/qc25022/upgi/experiments/llm_pretrain"
@@ -20,7 +20,7 @@ training:
   
   # Training hyperparameters
   epochs: 3
-  batch_size: 16
+  batch_size: 32
   eval_batch_size: 4
   learning_rate: 5e-5
   weight_decay: 0.01
