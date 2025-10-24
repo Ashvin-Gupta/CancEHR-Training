@@ -1,3 +1,8 @@
+# Import the new, separated trainer functions
+from src.training.unsloth_trainer import run_unsloth_training
+from src.training.peft_trainer import run_peft_training
+from src.data.unified_dataset import UnifiedEHRDataset # Your dataset
+
 # src/experiments/run_llm.py
 import argparse
 import yaml
@@ -7,10 +12,7 @@ from huggingface_hub import login
 from transformers import AutoTokenizer
 from datasets import Dataset
 
-# Import the new, separated trainer functions
-from src.training.unsloth_trainer import run_unsloth_training
-from src.training.peft_trainer import run_peft_training
-from src.data.unified_dataset import UnifiedEHRDataset # Your dataset
+
 
 def extract_text(base_dataset, tokenizer):
     """Extracts all valid text narratives from the base dataset and adds EOS token."""

@@ -35,7 +35,7 @@ def run_unsloth_training(config, tokenizer, train_dataset, val_dataset):
         random_state = 42,
     )
     print("  - Applied LoRA adapters (PEFT) to Unsloth model.")
-    
+    print(training_config['output_dir'])
     # 2. Set up Training Arguments
     training_args = TrainingArguments(
         output_dir=training_config['output_dir'],
