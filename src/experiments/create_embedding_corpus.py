@@ -38,10 +38,10 @@ def create_embedding_corpus(config_path):
         # Load dataset for this split
         dataset_args = {
             "data_dir": base_data_dir,
-            "vocab_file": data_config["vocab_file"],
-            "labels_file": data_config["labels_file"],
-            "medical_lookup_file": data_config["medical_lookup_file"],
-            "lab_lookup_file": data_config["lab_lookup_file"],
+            "vocab_file": data_config["vocab_filepath"],
+            "labels_file": data_config["labels_filepath"],
+            "medical_lookup_file": data_config["medical_lookup_filepath"],
+            "lab_lookup_file": data_config["lab_lookup_filepath"],
             "format": "events",
             "max_sequence_length": None
         }
