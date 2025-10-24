@@ -17,6 +17,7 @@ wandb:
 training:
   output_dir: "/data/scratch/qc25022/upgi/experiments/llm_pretrain"
   overwrite_output_dir: true
+  framework: 'unsloth'  # Use peft for standard HF PEFT
   
   # Training hyperparameters
   epochs: 3

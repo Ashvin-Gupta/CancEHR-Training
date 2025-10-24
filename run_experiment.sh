@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -cwd                 
 #$ -pe smp 8
-#$ -l h_rt=24:0:0
-#$ -l h_vmem=11G
+#$ -l h_rt=1:0:0
+#$ -l h_vmem=4G
 #$ -l gpu=1
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
