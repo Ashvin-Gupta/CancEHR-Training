@@ -29,7 +29,8 @@ echo "Starting experiment from directory: $(pwd)"
 #    --config_name cprd_decoder_lstm_test \
 #    --experiment_name exp_001 
 
-python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
+# python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
 
+python -m src.experiments.run_llm --config_filepath src/experiments/configs/llm_pretrain.yaml
 echo "Pipeline finished."
 deactivate
