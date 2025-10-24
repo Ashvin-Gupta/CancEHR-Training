@@ -91,4 +91,4 @@ if __name__ == "__main__":
     parser.add_argument("--config_filepath", type=str, required=True, help="Path to config file")
     args = parser.parse_args()
     
-    create_embedding_corpus(args.config)
+    create_embedding_corpus(args.config_filepath)
