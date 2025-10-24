@@ -24,7 +24,7 @@ data:
   max_sequence_length: 512 # <-- Truncates long sequences for your custom model
   
   # --- All the paths for your unified dataset ---
-  base_data_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/"
+  data_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/"
   vocab_filepath: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv"
   labels_filepath: "/data/scratch/qc25022/upgi/master_subject_labels.csv"
   medical_lookup_filepath: "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv"

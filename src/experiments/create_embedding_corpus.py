@@ -14,7 +14,7 @@ def create_embedding_corpus(config_path):
     model_config = config['model']
 
     # Get base directories
-    base_data_dir = data_config['base_data_dir']
+    base_data_dir = data_config['data_dir']
     base_output_dir = data_config['embedding_output_dir']
     
     # Define splits to process
