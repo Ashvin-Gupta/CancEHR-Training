@@ -88,7 +88,7 @@ def create_embedding_corpus(config_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True, help="Path to config file")
+    parser.add_argument("--config_filepath", type=str, required=True, help="Path to config file")
     args = parser.parse_args()
     
     create_embedding_corpus(args.config)
