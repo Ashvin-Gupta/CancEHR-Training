@@ -24,7 +24,9 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
+# python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
+
+python -m src.experiments.create_embedding_corpus --config_filepath src/experiments/configs/embed_text.yaml
 
 echo "Pipeline finished."
 deactivate
