@@ -3,7 +3,7 @@ name: "embed_text"
 model:
   # Model to pretrain (examples: gpt2, meta-llama/Llama-2-7b-hf, mistralai/Mistral-7B-v0.1, unsloth/llama-3-8b-bnb-4bit)
   model_name: "intfloat/e5-large-v2"
-  device: "cpu"
+  device: "cuda"
 
 training:
   output_dir: "/data/scratch/qc25022/upgi/experiments/embed_text"
