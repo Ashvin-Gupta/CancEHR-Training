@@ -4,6 +4,9 @@
 #$ -l h_rt=1:0:0       # 2 hours per run (1 epoch), 1 for debugging
 #$ -l h_vmem=11G
 #$ -l gpu=1
+#$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
+#$ -e /data/home/qc25022/CancEHR-Training/HPC_Files/loge/
+#$ -j n
 
 # 1. Activate your environment
 source /data/home/qc25022/CancEHR-Training/venv/bin/activate
@@ -19,4 +22,4 @@ CONFIG_FILE_PATH="/data/home/qc25022/CancEHR-Training/src/experiments/configs/ll
 
 # 4. Run the agent
 # It will execute this command over and over with new sweep params
-wandb agent --count 10 ${SWEEP_ID} python ${PYTHON_SCRIPT_PATH} --config_path ${CONFIG_FILE_PATH}
+wandb agent --count 10 ${SWEEP_ID} python ${PYTHON_SCRIPT_PATH} --config_filepath ${CONFIG_FILE_PATH}
