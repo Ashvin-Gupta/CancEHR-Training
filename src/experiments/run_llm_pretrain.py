@@ -105,10 +105,12 @@ def main(config_path: str):
         f"_ga{training_config['gradient_accumulation_steps']}"
         f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     )
+    print(default_run_name)
 
     if wandb_config.get('enabled', False):
         os.environ["WANDB_PROJECT"] = wandb_config.get("project", "ehr-llm-pretraining")
-        run_name = wandb_config.get("run_name", default_run_name)
+        # run_name = wandb_config.get("run_name", default_run_name)
+        run_name = default_run_name
         report_to = "wandb"
     else:
         run_name = default_run_name
