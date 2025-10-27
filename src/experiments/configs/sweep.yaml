@@ -6,6 +6,15 @@ metric:
   name: eval/loss
   goal: minimize
 
+program: /data/home/qc25022/CancEHR-Training/src/experiments/run_llm_pretrain.py
+
+command:
+  - ${env}         # Sets up environment variables
+  - ${interpreter}  # Calls 'python'
+  - ${program}      # Calls your main.py script
+  - --config_filepath   # Your script's required argument
+  - /data/home/qc25022/CancEHR-Training/src/experiments/configs/llm-pretrain.yaml
+
 parameters:
   # 1. Tune Training Hyperparameters
   training.learning_rate:
