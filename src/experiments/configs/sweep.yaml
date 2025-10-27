@@ -13,7 +13,7 @@ command:
   - ${interpreter}  # Calls 'python'
   - ${program}      # Calls your main.py script
   - --config_filepath   # Your script's required argument
-  - /data/home/qc25022/CancEHR-Training/src/experiments/configs/llm-pretrain.yaml
+  - /data/home/qc25022/CancEHR-Training/src/experiments/configs/llm_pretrain.yaml
 
 parameters:
   # 1. Tune Training Hyperparameters
