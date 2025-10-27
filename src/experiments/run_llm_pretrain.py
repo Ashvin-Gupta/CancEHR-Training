@@ -77,15 +77,31 @@ def main(config_path: str):
     model_config = config['model']
     data_config = config['data']
     training_config = config['training']
+    lora_config = config['lora']
     
     # 2. Set up WandB and hugging face token
     wandb_config = config.get('wandb', {})
+    
+    # Build default run name from hyperparameters
+    model_name = model_config['model_name'].split('/')[-1]
+    default_run_name = (
+        f"{model_name}-pretrain-{data_config['cutoff_months']}month-cutoff"
+        f"_r{lora_config['r']}"
+        f"_alpha{lora_config['lora_alpha']}"
+        f"_dropout{lora_config['lora_dropout']}"
+        f"_lr{training_config['learning_rate']}"
+        f"_bs{training_config['batch_size']}"
+        f"_wd{training_config['weight_decay']}"
+        f"_ga{training_config['gradient_accumulation_steps']}"
+        f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    )
+
     if wandb_config.get('enabled', False):
         os.environ["WANDB_PROJECT"] = wandb_config.get("project", "ehr-llm-pretraining")
-        run_name = wandb_config.get("run_name", f"pretrain_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        run_name = wandb_config.get("run_name", default_run_name)
         report_to = "wandb"
     else:
-        run_name = f"pretrain_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        run_name = default_run_name
         report_to = "none"
     
     token_file = os.path.join("src", "resources", "API_Keys.txt")
@@ -127,16 +143,16 @@ def main(config_path: str):
 
     model = FastLanguageModel.get_peft_model(
         model,
-        r = training_config.get('lora_r', 16),
-        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                            "gate_proj", "up_proj", "down_proj"], # Modules for Mistral/Llama
-        lora_alpha = training_config.get('lora_alpha', 16),
-        lora_dropout = 0,
-        bias = "none",
+        r = lora_config.get('r', 16),
+        target_modules = lora_config.get('target_modules', ["q_proj", "k_proj", "v_proj", "o_proj",
+                            "gate_proj", "up_proj", "down_proj"]), # Modules for Mistral/Llama
+        lora_alpha = lora_config.get('lora_alpha', 16),
+        lora_dropout = lora_config.get('lora_dropout', 0.05),
+        bias = lora_config.get('bias', "none"),
         use_gradient_checkpointing = training_config.get('gradient_checkpointing', True),
         random_state = 42,
-        use_rslora = True,
-        loftq_config = None,
+        use_rslora = lora_config.get('use_rslora', True),
+        loftq_config = lora_config.get('loftq_config', None),
     )
     print("  - Applied LoRA adapters (PEFT) to the model.")
 
