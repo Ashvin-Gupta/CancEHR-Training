@@ -78,7 +78,8 @@ def main(config_path: str):
     # data_config = config['data']
     # training_config = config['training']
     # lora_config = config['lora']
-    
+
+    # 2. Set up WandB and hugging face token
     wandb_config = config.get('wandb', {})
     wandb.init(
         project=wandb_config.get("project", "ehr-llm-pretraining"), 
@@ -89,11 +90,6 @@ def main(config_path: str):
     data_config = wandb.config.data
     training_config = wandb.config.training
     lora_config = wandb.config.lora
-    
-    # 2. Set up WandB and hugging face token
-    wandb_config = config.get('wandb', {})
-    wandb.init(project=wandb_config.get("project", "ehr-llm-pretraining"), config=config)
-
 
     
     # Build default run name from hyperparameters

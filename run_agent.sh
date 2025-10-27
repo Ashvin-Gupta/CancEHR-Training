@@ -9,14 +9,14 @@
 source /data/home/qc25022/miniconda3/bin/activate /data/home/qc25022/miniconda3/envs/llm
 
 # 2. Define your Sweep ID (get this from the 'wandb sweep' command)
-SWEEP_ID="ashvingupta00/ehr-llm-pretraining/abcdef12"
+SWEEP_ID="ashvingupta00/ehr-llm-pretraining/9eyqcotp"
 
 # 3. Define the *exact* command the agent should run for each job
 # This is your Python script + its required --config_path argument
 # IMPORTANT: Use the *full path* to your script and config
-YOUR_PYTHON_SCRIPT_PATH="/data/home/qc25022/CancEHR-Training/src/experiments/run_llm_pretrain.py"
-YOUR_CONFIG_FILE_PATH="/data/home/qc25022/CancEHR-Training/src/experiments/configs/llm-pretrain.yaml"
+PYTHON_SCRIPT_PATH="/data/home/qc25022/CancEHR-Training/src/experiments/run_llm_pretrain.py"
+CONFIG_FILE_PATH="/data/home/qc25022/CancEHR-Training/src/experiments/configs/llm-pretrain.yaml"
 
 # 4. Run the agent
 # It will execute this command over and over with new sweep params
-wandb agent --count 10 ${SWEEP_ID} python ${YOUR_PYTHON_SCRIPT_PATH} --config_path ${YOUR_CONFIG_FILE_PATH}
+wandb agent --count 10 ${SWEEP_ID} python ${PYTHON_SCRIPT_PATH} --config_path ${CONFIG_FILE_PATH}
