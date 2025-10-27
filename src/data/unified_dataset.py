@@ -40,7 +40,7 @@ class UnifiedEHRDataset(Dataset):
         vocab_df = pd.read_csv(vocab_file)
         self.id_to_token_map = pd.Series(vocab_df['str'].values, index=vocab_df['token']).to_dict()
 
-        if self.format == 'text' or self.format == 'pretrain':
+        if self.format == 'text' or self.format == 'events':
             medical_df = pd.read_csv(medical_lookup_file)
             self.medical_lookup = pd.Series(medical_df['term'].values, index=medical_df['code'].astype(str).str.upper()).to_dict()
             
