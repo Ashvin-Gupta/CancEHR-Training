@@ -35,7 +35,7 @@ training:
   warmup_steps: 500
   
   # Gradient settings
-  gradient_accumulation_steps: 1  # Effective batch size = gradient_accumulation_steps * batch_size
+  gradient_accumulation_steps: 4  # Effective batch size = gradient_accumulation_steps * batch_size
   gradient_checkpointing: false  # Set to true for large models to save memory
   
   # Precision
@@ -44,7 +44,7 @@ training:
   
   # Logging and saving
   logging_steps: 50
-  eval_steps: 200
+  eval_steps: 250
   save_steps: 2000
   save_total_limit: 1  # Keep only 1 best checkpoint
 
