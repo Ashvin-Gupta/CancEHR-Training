@@ -11,6 +11,7 @@ training:
   
 data:
   format: "events"
+  vocab_embedding_path: "/data/scratch/qc25022/upgi/experiments/embed_text/vocab_embeddings.pt"
   embedding_output_dir: "/data/scratch/qc25022/upgi/experiments/embed_text"
   data_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/"
   vocab_filepath: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv"
