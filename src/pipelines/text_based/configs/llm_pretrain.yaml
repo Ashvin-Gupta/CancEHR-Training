@@ -1,0 +1,57 @@
+# src/experiments/configs/llm-pretrain.yaml
+
+name: "llama_pretraining"
+
+model:
+  # Model to pretrain (examples: gpt2, meta-llama/Llama-2-7b-hf, mistralai/Mistral-7B-v0.1, unsloth/llama-3-8b-bnb-4bit, unsloth/Qwen3-8B-Base-unsloth-bnb-4bit)
+  model_name: "unsloth/Qwen3-1.7B-Base-unsloth-bnb-4bit"
+
+  max_length: 2048  # Context window for sequence packing
+  hf_token: null 
+
+wandb:
+  enabled: true
+  project: "ehr-llm-pretraining"
+  # run_name: null  # Will be auto-generated from config values during training
+
+lora:
+  r: 16
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+  lora_alpha: 16
+  lora_dropout: 0.05
+  bias: "none"
+
+training:
+  output_dir: "/data/scratch/qc25022/upgi/experiments/llm_pretrain"
+  overwrite_output_dir: true
+  framework: 'unsloth'  # Use peft for standard HF PEFT
+  
+  # Training hyperparameters
+  epochs: 3
+  batch_size: 8
+  eval_batch_size: 4
+  learning_rate: 1e-5
+  weight_decay: 0.01
+  warmup_steps: 500
+  
+  # Gradient settings
+  gradient_accumulation_steps: 4  # Effective batch size = gradient_accumulation_steps * batch_size
+  gradient_checkpointing: false  # Set to true for large models to save memory
+  
+  # Precision
+  fp16: true  # Use FP16 for faster training (if GPU supports it)
+  bf16: false  # Use BF16 for better numerical stability (if GPU supports it - I don't think it does)
+  
+  # Logging and saving
+  logging_steps: 50
+  eval_steps: 250
+  save_steps: 2000
+  save_total_limit: 1  # Keep only 1 best checkpoint
+
+data:
+  cutoff_months: 1  # Remove last 1 month before diagnosis for cancer patients
+  data_dir: "/data/scratch/qc25022/upgi/tokenised_data/cprd_upgi/"
+  vocab_filepath: "/data/scratch/qc25022/upgi/tokenised_data/cprd_upgi/vocab.csv"
+  labels_filepath: "/data/scratch/qc25022/upgi/master_subject_labels.csv"
+  medical_lookup_filepath: "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv"
+  lab_lookup_filepath: "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv"
