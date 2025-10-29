@@ -24,9 +24,11 @@ cd "${BASE_DIR}"
 
 echo "Starting run embedded pipeline experiment from directory: $(pwd)"
 
-# python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
-python -m src.pipelines.embedded_based.create_vocab_embeddings --config_filepath src/pipelines/embedded_based/configs/create_embeddings.yaml
-python -m src.pipelines.embedded_based.create_embeddings --config_filepath src/pipelines/embedded_based/configs/create_embeddings.yaml
+# Create vocabulary embeddings
+# python -m src.pipelines.embedded_based.create_vocab_embeddings --config_filepath src/pipelines/embedded_based/configs/create_embeddings.yaml
+# Create embedding corpus
+# python -m src.pipelines.embedded_based.create_embeddings --config_filepath src/pipelines/embedded_based/configs/create_embeddings.yaml
+# Pretrain encoder
 python -m src.pipelines.embedded_based.pretrain --config_filepath src/pipelines/embedded_based/configs/pretrain_encoder_embedded.yaml
 
 echo "Pipeline finished."

@@ -302,7 +302,7 @@ def main(config_path: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pretrain embedding-based models")
     parser.add_argument(
-        "--config",
+        "--config_filepath",
         type=str,
         required=True,
         help="Path to the config YAML file"
