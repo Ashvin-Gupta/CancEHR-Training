@@ -29,7 +29,7 @@ echo "Starting run embedded pipeline experiment from directory: $(pwd)"
 # Create embedding corpus
 # python -m src.pipelines.embedded_based.create_embeddings --config_filepath src/pipelines/embedded_based/configs/create_embeddings.yaml
 # Pretrain encoder
-python -m src.pipelines.embedded_based.pretrain --config_filepath src/pipelines/embedded_based/configs/pretrain_encoder_embedded.yaml
+python -m src.pipelines.embedded_based.pretrain --config_filepath src/pipelines/embedded_based/configs/pretrain_decoder_embedded.yaml
 
 echo "Pipeline finished."
 deactivate
