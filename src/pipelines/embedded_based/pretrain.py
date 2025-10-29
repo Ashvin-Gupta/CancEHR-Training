@@ -211,8 +211,8 @@ def main(config_path: str):
     # Create optimizer and loss
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=training_config['learning_rate'],
-        weight_decay=training_config.get('weight_decay', 0.01),
+        lr=float(training_config['learning_rate']),
+        weight_decay=float(training_config.get('weight_decay', 0.01)),
         betas=(0.9, 0.999)
     )
     
@@ -222,7 +222,7 @@ def main(config_path: str):
     # Learning rate scheduler
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        T_max=training_config['epochs'],
+        T_max=int(training_config['epochs']),
         eta_min=training_config.get('min_learning_rate', 1e-6)
     )
     
@@ -244,7 +244,7 @@ def main(config_path: str):
     best_val_loss = float('inf')
     best_epoch = 0
     
-    for epoch in range(training_config['epochs']):
+    for epoch in range(int(training_config['epochs'])):
         print(f"\nEpoch {epoch + 1}/{training_config['epochs']}")
         print("-" * 80)
         
