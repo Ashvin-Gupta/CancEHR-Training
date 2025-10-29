@@ -24,7 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.pipelines.token_based.pretrain --config src/pipelines/token_based/configs/encoder_lstm.yaml --experiment_name lstm_test
+python -m src.pipelines.token_based.pretrain --config src/pipelines/token_based/configs/cprd_decoder_lstm_test.yaml --experiment_name lstm_test
 
 echo "Pipeline finished."
 deactivate
