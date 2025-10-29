@@ -24,8 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.pipelines.text_based.finetune_bert \ 
-    --config_filepath src/pipelines/text_based/configs/fine-tune-bert2.yaml
+python -m src.pipelines.text_based.finetune_bert --config_filepath src/pipelines/text_based/configs/fine-tune-bert2.yaml
 
 echo "Pipeline finished."
 deactivate
