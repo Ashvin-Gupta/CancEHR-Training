@@ -169,23 +169,6 @@ wandb sweep src/pipelines/text_based/configs/sweep.yaml
 wandb agent <sweep_id>
 ```
 
-## Evaluation
-
-Visualize training results and run inference:
-
-```bash
-# Start visualization server
-python -m src.evaluation.visualisation_server.main
-
-# Open browser to http://localhost:5000
-```
-
-Features:
-- Training loss curves
-- Model inference playground
-- Rollout simulations
-- Benchmark comparisons
-
 ## Pipeline Comparison
 
 | Pipeline | Input Format | Models | Use Case |
