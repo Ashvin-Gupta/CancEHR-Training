@@ -18,7 +18,7 @@ class TransformerDecoderEmbedded(BaseNightingaleModel):
     Transformer decoder that works with pre-computed embeddings for autoregressive modeling.
     
     Architecture:
-        Input Embeddings (N, 768) → Linear Projection → Positional Encoding →
+        Input Embeddings (N, D) → Linear Projection → Positional Encoding →
         Transformer Decoder Blocks (Causal) → Linear Head → Token Logits
     
     Args:
@@ -140,45 +140,36 @@ class TransformerDecoderEmbedded(BaseNightingaleModel):
         """
         self.validate_input(x)
         
-        input_embeddings = x["input_embeddings"]  # (B, T, 768)
-        print(f'input_embeddings shape: {input_embeddings.shape}')
+        input_embeddings = x["input_embeddings"]  # (B, T, D_embed)
         padding_mask = x["padding_mask"]  # (B, T) - True = valid
-        print(f'padding_mask shape: {padding_mask.shape}')
         batch_size, seq_len, _ = input_embeddings.shape
         device = input_embeddings.device
         
         # Project to model dimension
-        embedded = self.input_projection(input_embeddings)  # (B, T, model_dim)
-        print(f'embedded shape: {embedded.shape}')
+        embedded = self.input_projection(input_embeddings)  # (B, T, D_model)
+        
         # Add positional encoding
         embedded = self.pos_encoding(embedded)
-        print(f'embedded shape: {embedded.shape}')
-        # Create causal attention mask
-        causal_mask = self._generate_causal_mask(seq_len, device)
-        # For nn.TransformerEncoder, we need the inverse: True = mask out
-        # But we'll use the mask parameter which expects float mask with -inf for masked positions
-        attn_mask = torch.full((seq_len, seq_len), True, device=device, dtype=torch.bool)
-        attn_mask = attn_mask.triu(diagonal=1)
-        print(f'attn_mask shape: {attn_mask.shape}')
-        # Create padding mask (True = padding for transformer)
+     
+        # Create boolean causal attention mask (True = masked)
+        # This prevents attention to future tokens.
+        attn_mask = torch.full((seq_len, seq_len), True, device=device, dtype=torch.bool).triu(diagonal=1)
+        # Create padding mask (True = padding)
         src_key_padding_mask = ~padding_mask  # Invert: True = padding
-        print(f'src_key_padding_mask shape: {src_key_padding_mask.shape}')
         # Pass through transformer decoder with causal mask
         output = self.transformer_decoder(
             embedded,
             mask=attn_mask,
             src_key_padding_mask=src_key_padding_mask
-        )  # (B, T, model_dim)
-        print(f'output shape: {output.shape}')
+        )  # (B, T, D_model)
         # Return appropriate output
         if return_classification and self.add_classification_head:
             # Pool and classify
             mask_expanded = padding_mask.unsqueeze(-1)  # (B, T, 1)
             masked_output = output * mask_expanded
-            sum_output = masked_output.sum(dim=1)  # (B, model_dim)
+            sum_output = masked_output.sum(dim=1)  # (B, D_model)
             seq_lengths = padding_mask.sum(dim=1, keepdim=True).clamp(min=1)
-            pooled = sum_output / seq_lengths  # (B, model_dim)
-            print(f'pooled shape: {pooled.shape}')
+            pooled = sum_output / seq_lengths  # (B, D_model)
             return self.classifier(pooled)  # (B, num_classes)
         else:
             # Next-token prediction

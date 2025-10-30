@@ -159,12 +159,14 @@ def main(config_path: str):
     train_dataset = PreEmbeddedDataset(
         data_dir=data_config['embedding_output_dir'],
         split='train',
-        task=task
+        task=task,
+        max_sequence_length=model_config['context_length']
     )
     val_dataset = PreEmbeddedDataset(
         data_dir=data_config['embedding_output_dir'],
         split='tuning',
-        task=task
+        task=task,
+        max_sequence_length=model_config['context_length']
     )
     
     print(f"Train dataset size: {len(train_dataset)}")
