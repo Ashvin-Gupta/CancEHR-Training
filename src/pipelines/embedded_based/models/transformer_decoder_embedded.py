@@ -157,8 +157,8 @@ class TransformerDecoderEmbedded(BaseNightingaleModel):
         causal_mask = self._generate_causal_mask(seq_len, device)
         # For nn.TransformerEncoder, we need the inverse: True = mask out
         # But we'll use the mask parameter which expects float mask with -inf for masked positions
-        attn_mask = torch.zeros(seq_len, seq_len, device=device)
-        attn_mask.masked_fill_(~causal_mask, float('-inf'))
+        attn_mask = torch.full((seq_len, seq_len), True, device=device, dtype=torch.bool)
+        attn_mask = attn_mask.triu(diagonal=1)
         print(f'attn_mask shape: {attn_mask.shape}')
         # Create padding mask (True = padding for transformer)
         src_key_padding_mask = ~padding_mask  # Invert: True = padding
