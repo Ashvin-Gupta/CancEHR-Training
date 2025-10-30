@@ -15,6 +15,7 @@ class PreEmbeddedDataset(Dataset):
             task: Task type - 'classification' (encoder), 'autoregressive' (decoder), or 'both'
             max_sequence_length: Maximum sequence length for the autoregressive task
         """
+        self.split = split
         self.split_dir = os.path.join(data_dir, split)
         if not os.path.exists(self.split_dir):
             raise ValueError(f"Split directory {self.split_dir} does not exist")
