@@ -147,9 +147,11 @@ def main(config_path: str):
     # Set up WandB
     wandb_config = config.get('wandb', {})
     if wandb_config.get('enabled', False):
-        project=wandb_config.get("project", "embedded-pretraining"),
-        config=config,
-        name=wandb_config.get("run_name")
+        wandb.init(
+            project=wandb_config.get("project", "embedded-pretraining"),
+            config=config,
+            name=wandb_config.get("run_name")
+        )
     
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
