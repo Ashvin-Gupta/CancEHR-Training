@@ -11,7 +11,7 @@ def create_embedding_corpus(config_path):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     data_config = config['data']
-    
+
     # Load PRE-COMPUTED vocabulary embeddings (FAST!)
     print("Loading pre-computed vocabulary embeddings...")
     vocab_embedding_path = data_config['vocab_embedding_path']
@@ -37,7 +37,8 @@ def create_embedding_corpus(config_path):
             "labels_file": data_config["labels_filepath"],
             "medical_lookup_file": data_config["medical_lookup_filepath"],
             "lab_lookup_file": data_config["lab_lookup_filepath"],
-            "format": "tokens",  # Just get token IDs!
+            "format": "tokens", # Just get token IDs!
+            "cutoff_months": data_config['cutoff_months'],
             "max_sequence_length": None
         }
         base_dataset = UnifiedEHRDataset(split=split, **dataset_args)

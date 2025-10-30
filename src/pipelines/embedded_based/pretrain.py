@@ -146,11 +146,20 @@ def main(config_path: str):
 
     # Set up WandB
     wandb_config = config.get('wandb', {})
+
+    default_run_name = (
+        f"{model_config['type']}-pretrain-{data_config['cutoff_months']}month-cutoff"
+        f"_lr{training_config['learning_rate']}"
+        f"_bs{training_config['batch_size']}"
+        f"_wd{training_config['weight_decay']}"
+        f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    )
+
     if wandb_config.get('enabled', False):
         wandb.init(
             project=wandb_config.get("project", "embedded-pretraining"),
             config=config,
-            name=wandb_config.get("run_name")
+            name=wandb_config.get("run_name", default_run_name)
         )
     
     # Set device

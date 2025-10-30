@@ -179,28 +179,5 @@ class UnifiedEHRDataset(Dataset):
                 "text": narrative,
                 "label": torch.tensor(label, dtype=torch.long)
             }
-        elif self.format == 'events':
-            string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
-            translated_phrases = [self._translate_token(code) for code in string_codes]
-            # Filter out any empty strings
-            translated_phrases = [phrase for phrase in translated_phrases if phrase]
-            if len(translated_phrases) == 0:
-                return None
-            return {
-                "events": translated_phrases, # List[str]
-                "label": torch.tensor(label, dtype=torch.long)
-            }
-        elif self.format == 'events_with_ids':
-            string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
-            translated_phrases = [self._translate_token(code) for code in string_codes]
-            # Filter out any empty strings
-            translated_phrases = [phrase for phrase in translated_phrases if phrase]
-            if len(translated_phrases) == 0:
-                return None
-            return {
-                "events": translated_phrases,  # List[str]
-                "token_ids": torch.tensor(token_ids, dtype=torch.long),  # Tensor of token IDs
-                "label": torch.tensor(label, dtype=torch.long)
-            }
         else:
             raise ValueError(f"Invalid format specified: {self.format}")
