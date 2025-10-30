@@ -141,34 +141,35 @@ class TransformerDecoderEmbedded(BaseNightingaleModel):
         self.validate_input(x)
         
         input_embeddings = x["input_embeddings"]  # (B, T, 768)
+        print(f'input_embeddings shape: {input_embeddings.shape}')
         padding_mask = x["padding_mask"]  # (B, T) - True = valid
-        
+        print(f'padding_mask shape: {padding_mask.shape}')
         batch_size, seq_len, _ = input_embeddings.shape
         device = input_embeddings.device
         
         # Project to model dimension
         embedded = self.input_projection(input_embeddings)  # (B, T, model_dim)
-        
+        print(f'embedded shape: {embedded.shape}')
         # Add positional encoding
         embedded = self.pos_encoding(embedded)
-        
+        print(f'embedded shape: {embedded.shape}')
         # Create causal attention mask
         causal_mask = self._generate_causal_mask(seq_len, device)
         # For nn.TransformerEncoder, we need the inverse: True = mask out
         # But we'll use the mask parameter which expects float mask with -inf for masked positions
         attn_mask = torch.zeros(seq_len, seq_len, device=device)
         attn_mask.masked_fill_(~causal_mask, float('-inf'))
-        
+        print(f'attn_mask shape: {attn_mask.shape}')
         # Create padding mask (True = padding for transformer)
         src_key_padding_mask = ~padding_mask  # Invert: True = padding
-        
+        print(f'src_key_padding_mask shape: {src_key_padding_mask.shape}')
         # Pass through transformer decoder with causal mask
         output = self.transformer_decoder(
             embedded,
             mask=attn_mask,
             src_key_padding_mask=src_key_padding_mask
         )  # (B, T, model_dim)
-        
+        print(f'output shape: {output.shape}')
         # Return appropriate output
         if return_classification and self.add_classification_head:
             # Pool and classify
@@ -177,6 +178,7 @@ class TransformerDecoderEmbedded(BaseNightingaleModel):
             sum_output = masked_output.sum(dim=1)  # (B, model_dim)
             seq_lengths = padding_mask.sum(dim=1, keepdim=True).clamp(min=1)
             pooled = sum_output / seq_lengths  # (B, model_dim)
+            print(f'pooled shape: {pooled.shape}')
             return self.classifier(pooled)  # (B, num_classes)
         else:
             # Next-token prediction

@@ -64,11 +64,12 @@ def train_epoch(model, dataloader, optimizer, criterion, device, task):
                 'input_embeddings': input_embeddings,
                 'padding_mask': padding_mask
             })  # (B, T, vocab_size)
-            
+            print(f'logits shape: {logits.shape}')
+            print(f'target_token_ids shape: {target_token_ids.shape}')
             # Compute loss (ignore padding tokens)
             loss = criterion(
                 logits.view(-1, logits.size(-1)),
-                target_token_ids.view(-1)
+                target_token_ids.reshape(-1)
             )
             
             # Count valid tokens
