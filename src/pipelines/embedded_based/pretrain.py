@@ -19,6 +19,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import wandb
 
 from src.data.embedded_dataset import PreEmbeddedDataset
 from src.data.embedding_collator import get_collate_fn
@@ -142,6 +143,13 @@ def main(config_path: str):
     model_config = config['model']
     data_config = config['data']
     training_config = config['training']
+
+    # Set up WandB
+    wandb_config = config.get('wandb', {})
+    if wandb_config.get('enabled', False):
+        project=wandb_config.get("project", "embedded-pretraining"),
+        config=config,
+        name=wandb_config.get("run_name")
     
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -265,6 +273,15 @@ def main(config_path: str):
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss: {val_loss:.4f} | Val Perplexity: {val_perplexity:.2f}")
         print(f"Learning Rate: {current_lr:.6f}")
+
+        if wandb_config.get('enabled', False):
+            wandb.log({
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                "val_perplexity": val_perplexity,
+                "learning_rate": current_lr
+            })
         
         # Save checkpoint
         checkpoint = {
@@ -300,6 +317,9 @@ def main(config_path: str):
     print("=" * 80)
     print(f"Best validation loss: {best_val_loss:.4f} (epoch {best_epoch})")
     print(f"Model saved to: {output_dir}")
+
+    if wandb_config.get('enabled', False):
+        wandb.finish()
 
 
 if __name__ == "__main__":

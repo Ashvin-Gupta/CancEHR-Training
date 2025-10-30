@@ -26,9 +26,12 @@ training:
   output_dir: "/data/scratch/qc25022/upgi/experiments/pretrain_decoder_embedded"
 
 data:
-  embedding_output_dir: "/data/scratch/qc25022/upgi/experiments/embed_text" # UPDATE THIS PATH
-  # This should point to the directory containing train/, tuning/, held_out/ subdirectories
-  # with .pt files created by create_embedding_corpus.py
+  embedding_output_dir: "/data/scratch/qc25022/upgi/experiments/embed_text" 
+
+wandb:
+  project: "pretrain_decoder_embedded"
+  enabled: true
+
 
 # Notes:
 # - This config is for unsupervised pretraining using next-event prediction
