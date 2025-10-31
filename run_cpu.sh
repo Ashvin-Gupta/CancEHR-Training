@@ -2,7 +2,7 @@
 #$ -cwd                 
 #$ -pe smp 4
 #$ -l h_rt=1:0:0
-#$ -l h_vmem=4G
+#$ -l h_vmem=12G
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_Files/loge/
@@ -25,8 +25,9 @@ cd "${BASE_DIR}"
 echo "Starting experiment from directory: $(pwd)"
 
 # python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
-python -m src.experiments.create_vocabulary_embeddings --config_filepath src/experiments/configs/embed_text.yaml
-python -m src.experiments.create_embedding_corpus --config_filepath src/experiments/configs/embed_text.yaml
+# python -m src.experiments.create_vocabulary_embeddings --config_filepath src/experiments/configs/embed_text.yaml
+# python -m src.experiments.create_embedding_corpus --config_filepath src/experiments/configs/embed_text.yaml
+python -m src.pipelines.embedded_based.TokenAdaptation
 
 echo "Pipeline finished."
 deactivate
