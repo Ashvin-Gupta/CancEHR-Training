@@ -1,5 +1,6 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+import unsloth
 from unsloth import FastLanguageModel
 
 original_model_name = "Qwen/Qwen3-0.6B"
@@ -43,13 +44,16 @@ if tokeniser.pad_token is None:
 else:
     print(f"PAD token already exists: {tokeniser.pad_token}")
 
+new_vocab_size = len(tokeniser)
+print(f"New vocabulary size: {new_vocab_size}")
+
 # Load model 
-model, tokeniser = FastLanguageModel.from_pretrained(
+model, _ = FastLanguageModel.from_pretrained(
     unsloth_model_name,
     max_seq_length=512,
     dtype=None,
     load_in_4bit=True,
-    tokenizer=tokeniser,
+    vocab_size=new_vocab_size,
 )
 
 print('Phase3: Overwriting random inits with averaged vectors')
