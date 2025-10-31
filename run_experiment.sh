@@ -2,11 +2,11 @@
 #$ -cwd                 
 #$ -pe smp 8
 #$ -l h_rt=24:0:0
-#$ -l h_vmem=11G
+#$ -l h_vmem=4G
 #$ -l gpu=1
 #$ -j n
-#$ -o /data/home/qc25022/CancEHR-Training/HPC_Files/logo/
-#$ -e /data/home/qc25022/CancEHR-Training/HPC_Files/loge/
+#$ -o /data/home/qc25022/CancEHR-Training/HPC_New/logo/
+#$ -e /data/home/qc25022/CancEHR-Training/HPC_New/loge/
 
 set -e 
 
@@ -25,13 +25,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-# python -m src.experiments.run \
-#    --config_name cprd_decoder_lstm_test \
-#    --experiment_name exp_001 
+python -m src.pipelines.embedded_based.TokenAdaptation
 
-python -m src.experiments.run_llm_pretrain --config_filepath src/experiments/configs/llm_pretrain.yaml
-# python -m src.experiments.create_embedding_corpus --config_filepath src/experiments/configs/embed_text.yaml
-
-# python -m src.experiments.run_llm --config_filepath src/experiments/configs/llm_pretrain.yaml
 echo "Pipeline finished."
 deactivate
