@@ -63,6 +63,7 @@ def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
         sub_embs = original_weights[sub_ids]
         avg_emb = sub_embs.mean(dim=0).to(embedding_weights.device)
         new_emb = embedding_weights[new_id]
+        print(f"{concept}: mean={new_emb.mean():.4f}, std={new_emb.std():.4f}")
         cos_sim = F.cosine_similarity(new_emb.unsqueeze(0), avg_emb.unsqueeze(0)).item()
         print(f"{concept}: cosine similarity to averaged sub-embedding = {cos_sim:.4f}")
 
