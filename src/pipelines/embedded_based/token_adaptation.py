@@ -66,6 +66,7 @@ def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
         print(f"{concept}: mean={new_emb.mean():.4f}, std={new_emb.std():.4f}")
         cos_sim = F.cosine_similarity(new_emb.unsqueeze(0), avg_emb.unsqueeze(0)).item()
         print(f"{concept}: cosine similarity to averaged sub-embedding = {cos_sim:.4f}")
+        print(max(min(cos_sim, 1.0), -1.0))
 
     return model
 
