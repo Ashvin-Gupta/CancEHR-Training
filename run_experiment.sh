@@ -25,7 +25,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.pipelines.embedded_based.TokenAdaptation
+python -m src.pipelines.embedded_based.token_adaptation
 
 echo "Pipeline finished."
 deactivate
