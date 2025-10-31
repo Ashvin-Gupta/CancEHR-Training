@@ -2,8 +2,18 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import unsloth
 from unsloth import FastLanguageModel
+import torch.nn.functional as F
 
 def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
+    '''
+    Token adaptation pipeline for embedding-based models.
+    Args:
+        original_model_name: Name of the original model.
+        unsloth_model_name: Name of the unsloth model.
+        new_concepts: List of new concepts to add to the model.
+    Returns:
+        model: The adapted model.
+    '''
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(unsloth_model_name)
 
@@ -45,5 +55,15 @@ def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
             new_embeddings[new_token_id] = sub_embs.mean(dim=0).to(new_embeddings.device, dtype=new_embeddings.dtype)
 
     print("All new token embeddings initialized successfully!")
+    
+    embedding_weights = model.get_input_embeddings().weight.data
+    for concept in new_concepts:
+        new_id = tokenizer.convert_tokens_to_ids(concept)
+        sub_ids = original_tokenizer.encode(concept, add_special_tokens=False)
+        sub_embs = original_weights[sub_ids]
+        avg_emb = sub_embs.mean(dim=0).to(embedding_weights.device)
+        new_emb = embedding_weights[new_id]
+        cos_sim = F.cosine_similarity(new_emb.unsqueeze(0), avg_emb.unsqueeze(0)).item()
+        print(f"{concept}: cosine similarity to averaged sub-embedding = {cos_sim:.4f}")
 
     return model
