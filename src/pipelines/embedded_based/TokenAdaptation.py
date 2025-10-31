@@ -1,5 +1,6 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from unsloth import FastLanguageModel
 
 model_name = "unsloth/Qwen3-0.6B-Base-unsloth-bnb-4bit"
 
@@ -16,13 +17,16 @@ for concept in new_concepts:
     new_token_to_sub_token_ids[concept] = sub_token_ids
 
 # Get original embedding matrix (weights of the model)
-base_model = AutoModelForCausalLM.from_pretrained(
+base_model = FastLanguageModel.from_pretrained(
     model_name,
     low_cpu_mem_usage=True,
-    torch_dtype=torch.float16,
+    dtype=torch.float16,
 )
 original_weights = base_model.get_input_embeddings().weight.data.cpu().float()
 
+# Clean up memory
 del base_model
 del original_tokeniser
+
 print('Phase2: Creating new embedding matrix')
+
