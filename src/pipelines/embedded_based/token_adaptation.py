@@ -67,3 +67,9 @@ def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
         print(f"{concept}: cosine similarity to averaged sub-embedding = {cos_sim:.4f}")
 
     return model
+
+if __name__ == "__main__":
+    original_model_name = "Qwen/Qwen3-0.6B"
+    unsloth_model_name = "unsloth/Qwen3-0.6B-Base-unsloth-bnb-4bit"
+    new_concepts = ["myocardial infarction", "Current smoker", "Bp diastolic", "7"]
+    token_adaptation(original_model_name, unsloth_model_name, new_concepts)
