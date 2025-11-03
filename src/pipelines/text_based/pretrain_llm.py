@@ -73,11 +73,6 @@ def main(config_path: str):
     
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-    
-    # model_config = config['model']
-    # data_config = config['data']
-    # training_config = config['training']
-    # lora_config = config['lora']
 
     # 2. Set up WandB and hugging face token
     wandb_config = config.get('wandb', {})
@@ -87,7 +82,6 @@ def main(config_path: str):
     training_config = config['training']
     lora_config = config['lora']
 
-    
     # Build default run name from hyperparameters
     model_name = model_config['model_name'].split('/')[-1]
     default_run_name = (
