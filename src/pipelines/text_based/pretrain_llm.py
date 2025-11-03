@@ -158,12 +158,11 @@ def main(config_path: str):
     model = FastLanguageModel.get_peft_model(
         model,
         r = lora_config.get('r', 16),
-        target_modules = lora_config.get('target_modules', ["q_proj", "k_proj", "v_proj", "o_proj",
-                            "gate_proj", "up_proj", "down_proj"]), # Modules for Mistral/Llama
+        # target_modules = lora_config.get('target_modules', ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]), # Modules for Mistral/Llama
         lora_alpha = lora_config.get('lora_alpha', 16),
         lora_dropout = lora_config.get('lora_dropout', 0.05),
         bias = lora_config.get('bias', "none"),
-        use_gradient_checkpointing = training_config.get('gradient_checkpointing', True),
+        use_gradient_checkpointing = training_config.get('gradient_checkpointing', 'unsloth'),
         random_state = 42,
         use_rslora = lora_config.get('use_rslora', True),
         loftq_config = lora_config.get('loftq_config', None),
