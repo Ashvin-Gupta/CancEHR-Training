@@ -145,6 +145,7 @@ def main(config_path: str):
     translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"])
     unique_concepts = translator.extract_translated_concepts(data_config["vocab_filepath"])
     base_model_name = model_config['model_name'].replace('unsloth/', '').replace('-unsloth-bnb-4bit', '')
+    print(f"Base model name: {base_model_name}")
     
     # Perform token adaptation BEFORE applying LoRA
     model, tokenizer = translator.token_adaptation(
