@@ -146,12 +146,10 @@ def main(config_path: str):
     unique_concepts = translator.extract_translated_concepts(data_config["vocab_filepath"])
     base_model_name = model_config['model_name'].replace('unsloth/', '').replace('-unsloth-bnb-4bit', '')
     print(f"Base model name: {base_model_name}")
-    print(len(base_model_name))
-    print(type(base_model_name))
     
     # Perform token adaptation BEFORE applying LoRA
     model, tokenizer = translator.token_adaptation(
-        original_model_name=str(base_model_name),
+        original_model_name=base_model_name,
         unsloth_model_name=model_config['model_name'],
         new_concepts=unique_concepts,
         max_seq_length=model_config['max_length'],  # Pass the max_length from config

@@ -108,7 +108,7 @@ class EHRTokenTranslator:
         return unique_concepts
     
 
-    def token_adaptation(original_model_name, unsloth_model_name, new_concepts, max_seq_length=512, load_in_4bit=True):
+    def token_adaptation(self,original_model_name, unsloth_model_name, new_concepts, max_seq_length=512, load_in_4bit=True):
         '''
         Token adaptation pipeline for embedding-based models.
         Args:
