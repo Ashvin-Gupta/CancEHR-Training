@@ -38,6 +38,7 @@ import torch
 from huggingface_hub import login
 
 from src.data.unified_dataset import UnifiedEHRDataset
+from src.pipelines.text_based.token_adaptation import EHRTokenTranslator
 
 
 def extract_text(base_dataset, tokenizer):
@@ -141,11 +142,17 @@ def main(config_path: str):
         device = "cpu"
         print(f"  - CUDA not available, using CPU")
     
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name = model_config['model_name'],
-        max_seq_length = model_config['max_length'],
-        dtype = torch.float16, # GPU does not support bfloat16
-        load_in_4bit = training_config.get('load_in_4bit', True), # Use 4-bit quantization
+    translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"])
+    unique_concepts = translator.extract_translated_concepts(data_config["vocab_filepath"])
+    base_model_name = model_config['model_name'].replace('unsloth/', '').replace('-unsloth-bnb-4bit', '')
+    
+    # Perform token adaptation BEFORE applying LoRA
+    model, tokenizer = translator.token_adaptation(
+        original_model_name=base_model_name,
+        unsloth_model_name=model_config['model_name'],
+        new_concepts=unique_concepts,
+        max_seq_length=model_config['max_length'],  # Pass the max_length from config
+        load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
     )
 
     model = FastLanguageModel.get_peft_model(

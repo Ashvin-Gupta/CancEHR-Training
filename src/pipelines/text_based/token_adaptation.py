@@ -108,87 +108,87 @@ class EHRTokenTranslator:
         return unique_concepts
     
 
-def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
-    '''
-    Token adaptation pipeline for embedding-based models.
-    Args:
-        original_model_name: Name of the original model.
-        unsloth_model_name: Name of the unsloth model.
-        new_concepts: List of new concepts to add to the model.
-    Returns:
-        model: The adapted model.
-    '''
-    # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(unsloth_model_name)
+    def token_adaptation(original_model_name, unsloth_model_name, new_concepts, max_seq_length=512, load_in_4bit=True):
+        '''
+        Token adaptation pipeline for embedding-based models.
+        Args:
+            original_model_name: Name of the original model.
+            unsloth_model_name: Name of the unsloth model.
+            new_concepts: List of new concepts to add to the model.
+        Returns:
+            model: The adapted model.
+        '''
+        # Load tokenizer
+        tokenizer = AutoTokenizer.from_pretrained(unsloth_model_name)
 
-    # Check for original tokens
-    current_vocab = tokenizer.get_vocab().keys()
-    tokens_to_add = []
-    tokens_that_exist = []
+        # Check for original tokens
+        current_vocab = tokenizer.get_vocab().keys()
+        tokens_to_add = []
+        tokens_that_exist = []
 
-    for concept in new_concepts:
-        if concept not in current_vocab:
-            tokens_to_add.append(concept)
-        else:
-            tokens_that_exist.append(concept)
+        for concept in new_concepts:
+            if concept not in current_vocab:
+                tokens_to_add.append(concept)
+            else:
+                tokens_that_exist.append(concept)
 
-    if tokens_that_exist:
-        print(f'Warning: {len(tokens_that_exist)} tokens already exist in the tokenizer')
-        print(f"Tokens that already exist: {tokens_that_exist}")
+        if tokens_that_exist:
+            print(f'Warning: {len(tokens_that_exist)} tokens already exist in the tokenizer')
+            print(f"Tokens that already exist: {tokens_that_exist}")
 
-    # Add new tokens
-    num_new_tokens = tokenizer.add_tokens(tokens_to_add)
+        # Add new tokens
+        num_new_tokens = tokenizer.add_tokens(tokens_to_add)
 
-    # Add PAD token if needed
-    if tokenizer.pad_token is None:
-        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        # Add PAD token if needed
+        if tokenizer.pad_token is None:
+            tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
-    print(f"Added {num_new_tokens} new tokens. New vocab size = {len(tokenizer)}")
+        print(f"Added {num_new_tokens} new tokens. New vocab size = {len(tokenizer)}")
 
-    # Load the model FIRST (without modifying vocab_size)
-    model, _ = FastLanguageModel.from_pretrained(
-        unsloth_model_name,
-        max_seq_length=512,
-        dtype=None,
-        load_in_4bit=True,
-    )
+        # Load the model FIRST (without modifying vocab_size)
+        model, _ = FastLanguageModel.from_pretrained(
+            unsloth_model_name,
+            max_seq_length=max_seq_length,
+            dtype=None,
+            load_in_4bit=load_in_4bit,
+        )
 
-    # Now resize embeddings to match the tokenizer
-    model.resize_token_embeddings(len(tokenizer))
+        # Now resize embeddings to match the tokenizer
+        model.resize_token_embeddings(len(tokenizer))
 
-    # Initialize the new embeddings (average of sub-token embeddings)
-    original_tokenizer = AutoTokenizer.from_pretrained(original_model_name)
-    base_model = AutoModelForCausalLM.from_pretrained(
-        original_model_name,
-        low_cpu_mem_usage=True,
-        dtype=torch.float16,
-    )
-    original_weights = base_model.get_input_embeddings().weight.data.cpu().float()
+        # Initialize the new embeddings (average of sub-token embeddings)
+        original_tokenizer = AutoTokenizer.from_pretrained(original_model_name)
+        base_model = AutoModelForCausalLM.from_pretrained(
+            original_model_name,
+            low_cpu_mem_usage=True,
+            dtype=torch.float16,
+        )
+        original_weights = base_model.get_input_embeddings().weight.data.cpu().float()
 
-    new_embeddings = model.get_input_embeddings().weight.data
-    with torch.no_grad():
-        for concept in tokens_to_add:
-            new_token_id = tokenizer.convert_tokens_to_ids(concept)
-            sub_token_ids = original_tokenizer.encode(concept, add_special_tokens=False)
-            sub_embs = original_weights[sub_token_ids]
-            new_embeddings[new_token_id] = sub_embs.mean(dim=0).to(new_embeddings.device, dtype=new_embeddings.dtype)
+        new_embeddings = model.get_input_embeddings().weight.data
+        with torch.no_grad():
+            for concept in tokens_to_add:
+                new_token_id = tokenizer.convert_tokens_to_ids(concept)
+                sub_token_ids = original_tokenizer.encode(concept, add_special_tokens=False)
+                sub_embs = original_weights[sub_token_ids]
+                new_embeddings[new_token_id] = sub_embs.mean(dim=0).to(new_embeddings.device, dtype=new_embeddings.dtype)
 
-    print("All new token embeddings initialized successfully!")
-    
-    # For checking the cosine similarity of the new embeddings to the original embeddings
-    # embedding_weights = model.get_input_embeddings().weight.data
-    # for concept in tokens_to_add:
-    #     new_id = tokenizer.convert_tokens_to_ids(concept)
-    #     sub_ids = original_tokenizer.encode(concept, add_special_tokens=False)
-    #     sub_embs = original_weights[sub_ids]
-    #     avg_emb = sub_embs.mean(dim=0).to(embedding_weights.device)
-    #     new_emb = embedding_weights[new_id]
-    #     print(f"{concept}: mean={new_emb.mean():.4f}, std={new_emb.std():.4f}")
-    #     cos_sim = F.cosine_similarity(new_emb.unsqueeze(0), avg_emb.unsqueeze(0)).item()
-    #     print(f"{concept}: cosine similarity to averaged sub-embedding = {cos_sim:.4f}")
-    #     print(max(min(cos_sim, 1.0), -1.0))
+        print("All new token embeddings initialized successfully!")
+        
+        # For checking the cosine similarity of the new embeddings to the original embeddings
+        # embedding_weights = model.get_input_embeddings().weight.data
+        # for concept in tokens_to_add:
+        #     new_id = tokenizer.convert_tokens_to_ids(concept)
+        #     sub_ids = original_tokenizer.encode(concept, add_special_tokens=False)
+        #     sub_embs = original_weights[sub_ids]
+        #     avg_emb = sub_embs.mean(dim=0).to(embedding_weights.device)
+        #     new_emb = embedding_weights[new_id]
+        #     print(f"{concept}: mean={new_emb.mean():.4f}, std={new_emb.std():.4f}")
+        #     cos_sim = F.cosine_similarity(new_emb.unsqueeze(0), avg_emb.unsqueeze(0)).item()
+        #     print(f"{concept}: cosine similarity to averaged sub-embedding = {cos_sim:.4f}")
+        #     print(max(min(cos_sim, 1.0), -1.0))
 
-    return model
+        return model, tokenizer
 
 if __name__ == "__main__":
     original_model_name = "Qwen/Qwen3-0.6B"
@@ -200,4 +200,4 @@ if __name__ == "__main__":
     translator = EHRTokenTranslator(medical_lookup_filepath, lab_lookup_filepath)
     unique_concepts = translator.extract_translated_concepts(vocab_filepath)
     print(f"Unique concepts: {unique_concepts}")
-    # token_adaptation(original_model_name, unsloth_model_name, new_concepts)
+    # model, tokenizer = translator.token_adaptation(original_model_name, unsloth_model_name, unique_concepts, max_seq_length=512, load_in_4bit=True)
