@@ -17,8 +17,23 @@ def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(unsloth_model_name)
 
+    # Check for original tokens
+    current_vocab = tokenizer.get_vocab().keys()
+    tokens_to_add = []
+    tokens_that_exist = []
+
+    for concept in new_concepts:
+        if concept not in current_vocab:
+            tokens_to_add.append(concept)
+        else:
+            tokens_that_exist.append(concept)
+
+    if tokens_that_exist:
+        print(f"Tokens that already exist: {tokens_that_exist}")
+        raise ValueError("Tokens that already exist in the tokenizer cannot be added")
+
     # Add new tokens
-    num_new_tokens = tokenizer.add_tokens(new_concepts)
+    num_new_tokens = tokenizer.add_tokens(tokens_to_add)
 
     # Add PAD token if needed
     if tokenizer.pad_token is None:
@@ -56,6 +71,7 @@ def token_adaptation(original_model_name, unsloth_model_name, new_concepts):
 
     print("All new token embeddings initialized successfully!")
     
+    # For checking the cosine similarity of the new embeddings to the original embeddings
     embedding_weights = model.get_input_embeddings().weight.data
     for concept in new_concepts:
         new_id = tokenizer.convert_tokens_to_ids(concept)

@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd                 
 #$ -pe smp 8
-#$ -l h_rt=24:0:0
+#$ -l h_rt=1:0:0
 #$ -l h_vmem=4G
 #$ -l gpu=1
 #$ -j n
@@ -25,7 +25,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.pipelines.embedded_based.token_adaptation
+python -m src.pipelines.text_based.token_adaptation
 
 echo "Pipeline finished."
 deactivate
