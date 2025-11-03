@@ -153,6 +153,7 @@ def main(config_path: str):
         max_seq_length=model_config['max_length'],  # Pass the max_length from config
         load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
     )
+    print(f"Model: {model}")
 
     model = FastLanguageModel.get_peft_model(
         model,
