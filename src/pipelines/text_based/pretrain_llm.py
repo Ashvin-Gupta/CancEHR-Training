@@ -153,8 +153,6 @@ def main(config_path: str):
         max_seq_length=model_config['max_length'],  # Pass the max_length from config
         load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
     )
-    print(f"Model: {model}")
-    print("Loaded model id:", id(model))
 
     model = FastLanguageModel.get_peft_model(
         model,
@@ -170,20 +168,7 @@ def main(config_path: str):
 
     )
     print("  - Applied LoRA adapters (PEFT) to the model.")
-    print("New model id:", id(model))
 
-    found = defaultdict(list)
-    for name, mod in model.named_modules():
-        # look for typical LoRA markers
-        if any(hasattr(mod, attr) for attr in ("lora_A", "lora_B", "lora_alpha", "rank")):
-            found["by_attr"].append(name)
-        # or check class name
-        cls = mod.__class__.__name__.lower()
-        if "lora" in cls or "adapter" in cls or "peft" in cls:
-            found["by_classname"].append(name)
-
-    print("LoRA-like modules by attr:", found["by_attr"][:30])
-    print("LoRA-like modules by classname:", found["by_classname"][:30])
     
     # 4. Create Base Datasets (text format)
     print("\n" + "=" * 80)
