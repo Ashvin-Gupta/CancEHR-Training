@@ -11,7 +11,7 @@ model:
 
 wandb:
   enabled: true
-  project: "ehr-llm-pretraining"
+  project: "cpt-Qwen"
   # run_name: null  # Will be auto-generated from config values during training
 
 lora:
@@ -27,11 +27,11 @@ training:
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
   # Training hyperparameters
-  epochs: 3
+  epochs: 2
   batch_size: 8
   eval_batch_size: 4
-  learning_rate: 1e-5
-  weight_decay: 0.01
+  learning_rate: 5e-6
+  weight_decay: 0.05
   warmup_steps: 500
   
   # Gradient settings
@@ -50,8 +50,8 @@ training:
 
 data:
   cutoff_months: 1  # Remove last 1 month before diagnosis for cancer patients
-  data_dir: "/data/scratch/qc25022/upgi/tokenised_data/cprd_upgi/"
-  vocab_filepath: "/data/scratch/qc25022/upgi/tokenised_data/cprd_upgi/vocab.csv"
+  data_dir: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/"
+  vocab_filepath: "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv"
   labels_filepath: "/data/scratch/qc25022/upgi/master_subject_labels.csv"
   medical_lookup_filepath: "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv"
   lab_lookup_filepath: "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv"
