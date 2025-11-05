@@ -72,18 +72,7 @@ class EHRTokenTranslator:
                 parts = token_string.split('//')
                 return f"{parts[1]}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                if int(token_string[1:]) <= 2:
-                    return f"Low"
-                    print(f"Low from EHRTokenTranslator")
-                elif int(token_string[1:]) <= 6:
-                    return f"Normal"
-                    print(f"Normal from EHRTokenTranslator")
-                elif int(token_string[1:]) <= 9:
-                    return f"High"
-                    print(f"High from EHRTokenTranslator")
-                else:
-                    return f"{token_string[1:]}"
-                    print(f"Unknown from EHRTokenTranslator")
+                return ""
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
                 return ""
             else:
@@ -108,38 +97,26 @@ class EHRTokenTranslator:
         token_strings = vocab_df['str'].values 
         
         translated_concepts = []
-        i = 0
         
-        # This loop mirrors the logic you need in unified_dataset.py
-        while i < len(token_strings):
-            current_code = token_strings[i]
-
-            is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//'))
-            has_next_token = (i + 1 < len(token_strings))
-            is_next_a_quantile = False
-
-            if has_next_token:
-                next_code = token_strings[i+1]
-                is_next_a_quantile = (next_code.startswith('Q') and next_code[1:].isdigit())
-
-            # If we have a measurable concept AND its quantile value, combine them
-            if is_measurable and is_next_a_quantile:
-                concept = self._translate_token(current_code) # e.g., "HbA1c"
-                value_bin = self._translate_token(next_code)  # e.g., "Normal"
-                
-                if concept and value_bin: # Only add if both are valid
-                    # Create the new combined token
-                    translated_concepts.append(f"{concept}: {value_bin}") 
-                
-                i += 2 # CRITICAL: Skip both the concept and its value
+        for token_string in token_strings:
             
-            # Otherwise, just translate the single token as normal
+            # If it's a measurable concept, add all 3 binned variations
+            if token_string.startswith('LAB//') or token_string.startswith('MEASUREMENT//') or token_string.startswith('BMI//') or token_string.startswith('HEIGHT//') or token_string.startswith('WEIGHT//'):
+                concept = self._translate_token(token_string) # e.g., "HbA1c"
+                if concept:
+                    translated_concepts.append(f"{concept}: Low")
+                    translated_concepts.append(f"{concept}: Normal")
+                    translated_concepts.append(f"{concept}: High")
+            
+            # If it's a quantile token, skip it
+            elif token_string.startswith('Q') and token_string[1:].isdigit():
+                continue
+            
+            # Otherwise, just translate and add the single token
             else:
-                phrase = self._translate_token(current_code)
-                if phrase: # Add if not an empty string (like <start>, etc.)
+                phrase = self._translate_token(token_string)
+                if phrase: # Add if not an empty string
                     translated_concepts.append(phrase)
-                
-                i += 1 # CRITICAL: Skip just this one token
         
         # Return unique concepts
         unique_concepts = sorted(list(set(translated_concepts)))
