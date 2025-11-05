@@ -5,6 +5,8 @@ from unsloth import FastLanguageModel
 import torch.nn.functional as F
 import pandas as pd
 
+from src.pipelines.text_based.utils import translate_tokens_with_bins
+
 class EHRTokenTranslator:
     """
     Class to handle translation of EHR tokens to natural language.
@@ -71,7 +73,14 @@ class EHRTokenTranslator:
                 parts = token_string.split('//')
                 return f"{parts[1]}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                return f"{token_string[1:]}"
+                if int(token_string[1:]) <= 2:
+                    return f"Low"
+                elif int(token_string[1:]) <= 6:
+                    return f"Normal"
+                elif int(token_string[1:]) <= 9:
+                    return f"High"
+                else:
+                    return f"{token_string[1:]}"
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
                 return ""
             else:
@@ -93,12 +102,41 @@ class EHRTokenTranslator:
         # Load vocab
         vocab_df = pd.read_csv(vocab_filepath)
         
-        # Translate all tokens
+        token_strings = vocab_df['str'].values 
+        
         translated_concepts = []
-        for token_str in vocab_df['str'].values:
-            translated = self._translate_token(token_str)
-            if translated:  # Only add non-empty translations
-                translated_concepts.append(translated)
+        i = 0
+        
+        # This loop mirrors the logic you need in unified_dataset.py
+        while i < len(token_strings):
+            current_code = token_strings[i]
+
+            is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//'))
+            has_next_token = (i + 1 < len(token_strings))
+            is_next_a_quantile = False
+
+            if has_next_token:
+                next_code = token_strings[i+1]
+                is_next_a_quantile = (next_code.startswith('Q') and next_code[1:].isdigit())
+
+            # If we have a measurable concept AND its quantile value, combine them
+            if is_measurable and is_next_a_quantile:
+                concept = self._translate_token(current_code) # e.g., "HbA1c"
+                value_bin = self._translate_token(next_code)  # e.g., "Normal"
+                
+                if concept and value_bin: # Only add if both are valid
+                    # Create the new combined token
+                    translated_concepts.append(f"{concept}: {value_bin}") 
+                
+                i += 2 # CRITICAL: Skip both the concept and its value
+            
+            # Otherwise, just translate the single token as normal
+            else:
+                phrase = self._translate_token(current_code)
+                if phrase: # Add if not an empty string (like <start>, etc.)
+                    translated_concepts.append(phrase)
+                
+                i += 1 # CRITICAL: Skip just this one token
         
         # Return unique concepts
         unique_concepts = sorted(list(set(translated_concepts)))
@@ -138,6 +176,7 @@ class EHRTokenTranslator:
 
         # Add new tokens
         num_new_tokens = tokenizer.add_tokens(tokens_to_add)
+        print(f"Tokens to add: {tokens_to_add}")
 
         # Add PAD token if needed
         if tokenizer.pad_token is None:

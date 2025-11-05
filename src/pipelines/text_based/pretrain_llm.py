@@ -328,7 +328,7 @@ def main(config_path: str):
     FastLanguageModel.for_inference(model)
 
     # Define a sample prompt
-    prompt = "AGE_decile, 5, AGE_unit, 5, FEMALE, WHITE, 2, Bmi, 5, Height, 3, Weight, 4, Current Smoker, Universal precautions, Bathing eye, Current Or Ex-Smoker, 4mt-6mt, Blood Pressure, Other soft tissue disorders, Bp Diastolic, 4, Bp Systolic, 0, 30d-2mt, Drug therapy, 7d-12d, Digestive system disease screening, 2mt-4mt, Bp Diastolic, 7, Bp Systolic, 6, Universal precautions, Asthma trigger, Assessment scales, 1, Respiratory flow rate, 7, Drug therapy, Mental/developmental handicap screening, Assessment scales, Immunisation status screening, Asthma, Lung and mediastinum operations, Other respiratory disease monitoring, Respiratory disease monitoring, Education, Procedure on respiratory system, Medication management"
+    prompt = "AGE_decile 5 AGE_unit 5 FEMALE WHITE 2 Bmi 5 Height 3 Weight 4 Current Smoker Universal precautions Bathing eye Current Or Ex-Smoker 4mt-6mt Blood Pressure Other soft tissue disorders Bp Diastolic 4 Bp Systolic 0 30d-2mt Drug therapy 7d-12d Digestive system disease screening 2mt-4mt Bp Diastolic 7 Bp Systolic 6 Universal precautions Asthma trigger Assessment scales 1 Respiratory flow rate 7 Drug therapy Mental/developmental handicap screening Assessment scales Immunisation status screening Asthma Lung and mediastinum operations Other respiratory disease monitoring Respiratory disease monitoring Education Procedure on respiratory system Medication management"
     print(f"PROMPT: {prompt}\n")
     print("MODEL OUTPUT:")
 
@@ -338,40 +338,49 @@ def main(config_path: str):
 
     inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
 
+    # 0. Create a list to capture all the generated text
+    all_generated_chunks = []
+    
+    # 1. Setup generation kwargs and start the thread
     generation_kwargs = dict(
         inputs,
         streamer=text_streamer,
-        max_new_tokens=256, # Generate 256 new tokens
+        max_new_tokens=256,
         use_cache=True,
     )
-    
-    # Start generation in a separate thread
     thread = Thread(target=model.generate, kwargs=generation_kwargs)
     thread.start()
 
-    # Print the output as it streams
+    # 2. Print the LIVE (raw) output as it streams
+    # (This will be a single, long line of space-separated tokens)
+    print("MODEL OUTPUT (RAW STREAM):")
     length = 0
     for j, new_text in enumerate(text_streamer):
-        if j == 0:
-            wrapped_text = textwrap.wrap(new_text, width=max_print_width)
-            length = len(wrapped_text[-1]) if wrapped_text else 0
-            wrapped_text = "\n".join(wrapped_text)
-            print(wrapped_text, end="")
-        else:
-            length += len(new_text)
-            if length >= max_print_width:
-                # Find the last space to wrap nicely
-                wrap_point = new_text.rfind(' ', 0, max_print_width - (length - len(new_text)))
-                if wrap_point != -1:
-                    print(new_text[:wrap_point] + "\n" + new_text[wrap_point+1:], end="")
-                    length = len(new_text[wrap_point+1:])
-                else:
-                    print("\n" + new_text, end="")
-                    length = len(new_text)
-            else:
-                print(new_text, end="")
+        print(new_text, end="")
+        all_generated_chunks.append(new_text) # Capture the chunk
     
-    print("\n") # Add a final newline
+    # 3. Wait for the generation thread to finish
+    thread.join()
+
+    # 4. Now, create the FORMATTED readable output
+    print("\n\n" + "=" * 80)
+    print("--- Formatted Readable Output ---")
+    print("=" * 80)
+
+    # Combine all the chunks into one full string
+    full_generated_text = "".join(all_generated_chunks)
+    
+    full_token_list = tokenizer.tokenize(full_generated_text)
+
+    # Filter out the spacer tokens (which are ' ' for most models)
+    ehr_events_only = [tok for tok in full_token_list if tok != " "]
+
+    # Join the "real" tokens with a comma and space
+    readable_output = ", ".join(ehr_events_only)
+
+    # Use textwrap.fill to wrap the final, readable string
+    print(textwrap.fill(readable_output, width=max_print_width))
+    print("\n")
 
 
 if __name__ == "__main__":

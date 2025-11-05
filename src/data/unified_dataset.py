@@ -29,7 +29,7 @@ class UnifiedEHRDataset(Dataset):
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
         # Load the patient records from the .pkl files for the specified split
         if split == 'tuning' or split == 'held_out':
-            self.patient_records = self._load_data(data_dir, split, limit=5)
+            self.patient_records = self._load_data(data_dir, split, limit=30)
         else:
             # Chaning to 5 to see result and inference
             self.patient_records = self._load_data(data_dir, split)
@@ -64,8 +64,6 @@ class UnifiedEHRDataset(Dataset):
     def _load_data(self, data_dir, split, limit=None, seed=42):
         """Loads a limited number of patient records from .pkl files in a directory."""
         data_dir = os.path.join(data_dir, split)
-        if split == 'tuning':
-            data_dir = '/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/tuning'
         records = []
         pkl_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.pkl')]
 
@@ -110,7 +108,14 @@ class UnifiedEHRDataset(Dataset):
                 parts = token_string.split('//')
                 return f"{parts[1]}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                return f"{token_string[1:]}"
+                if int(token_string[1:]) <= 2:
+                    return f"Low"
+                elif int(token_string[1:]) <= 6:
+                    return f"Normal"
+                elif int(token_string[1:]) <= 9:
+                    return f"High"
+                else:
+                    return f"{token_string[1:]}"
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
                 return ""
             else:
@@ -171,10 +176,54 @@ class UnifiedEHRDataset(Dataset):
                 "tokens": torch.tensor(token_ids, dtype=torch.long),
                 "label": torch.tensor(label, dtype=torch.long)
             }
+        # elif self.format == 'text':
+        #     string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
+        #     translated_phrases = [self._translate_token(code) for code in string_codes]
+        #     narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
+        #     return {
+        #         "text": narrative,
+        #         "label": torch.tensor(label, dtype=torch.long)
+        #     }
         elif self.format == 'text':
             string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
-            translated_phrases = [self._translate_token(code) for code in string_codes]
-            narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
+            translated_phrases = []
+            i = 0
+            while i < len(string_codes):
+                current_code = string_codes[i]
+                
+                # Check if the current token is a measurable concept
+                is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//'))
+                has_next_token = (i + 1 < len(string_codes))
+                is_next_a_quantile = False
+                
+                if has_next_token:
+                    next_code = string_codes[i+1]
+                    # Check if the next token is a quantile (e.g., "Q2", "Q7")
+                    is_next_a_quantile = (next_code.startswith('Q') and next_code[1:].isdigit())
+
+                # If we have a measurable concept AND its quantile value, combine them
+                if is_measurable and is_next_a_quantile:
+                    concept = self._translate_token(current_code) # e.g., "HbA1c"
+                    value_bin = self._translate_token(next_code)  # e.g., "Normal"
+                    
+                    if concept and value_bin: # Only add if both are valid
+                        # Create the new combined token
+                        translated_phrases.append(f"{concept}: {value_bin}") 
+                    
+                    i += 2 # CRITICAL: Skip both the concept and its value
+                
+                # Otherwise, just translate the single token as normal
+                else:
+                    phrase = self._translate_token(current_code)
+                    if phrase: # Add if not an empty string (like <start>, etc.)
+                        translated_phrases.append(phrase)
+                    
+                    i += 1 # CRITICAL: Skip just this one token
+                
+                # --- END OF NEW LOGIC ---
+
+            narrative = " ".join(translated_phrases)
+            
             return {
                 "text": narrative,
                 "label": torch.tensor(label, dtype=torch.long)
