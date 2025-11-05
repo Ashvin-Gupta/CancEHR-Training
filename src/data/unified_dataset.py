@@ -209,6 +209,7 @@ class UnifiedEHRDataset(Dataset):
                     if concept and value_bin: # Only add if both are valid
                         # Create the new combined token
                         translated_phrases.append(f"{concept}: {value_bin}") 
+                        print(f"Combined token: {concept}: {value_bin} from UnifiedEHRDataset")
                     
                     i += 2 # CRITICAL: Skip both the concept and its value
                 

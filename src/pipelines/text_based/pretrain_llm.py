@@ -200,15 +200,14 @@ def main(config_path: str):
     print("=" * 80)
     
     # 5. Extract text from datasets
-    # Needed as HuggingFace's SFTTrainer expects a dataset with a 'text' field and all at once
     train_text_list = extract_text(train_base_dataset, tokenizer)
     val_text_list = extract_text(val_base_dataset, tokenizer)
 
     print("\nVerifying data - First 3 patient narratives:")
-    for i in range(min(3, len(train_text_list))):
-        print(f"\n--- PATIENT {i} ---")
-        # Print the last 1000 chars
-        print(f"{train_text_list[i][-1000:]}...")
+    # for i in range(min(3, len(train_text_list))):
+    #     print(f"\n--- PATIENT {i} ---")
+    #     # Print the last 1000 chars
+    #     print(f"{train_text_list[i][:1000]}...")
 
     print("\n" + "=" * 80)
     print("Creating SFT datasets...")
@@ -328,7 +327,7 @@ def main(config_path: str):
     FastLanguageModel.for_inference(model)
 
     # Define a sample prompt
-    prompt = "AGE_decile 5 AGE_unit 5 FEMALE WHITE 2 Bmi 5 Height 3 Weight 4 Current Smoker Universal precautions Bathing eye Current Or Ex-Smoker 4mt-6mt Blood Pressure Other soft tissue disorders Bp Diastolic 4 Bp Systolic 0 30d-2mt Drug therapy 7d-12d Digestive system disease screening 2mt-4mt Bp Diastolic 7 Bp Systolic 6 Universal precautions Asthma trigger Assessment scales 1 Respiratory flow rate 7 Drug therapy Mental/developmental handicap screening Assessment scales Immunisation status screening Asthma Lung and mediastinum operations Other respiratory disease monitoring Respiratory disease monitoring Education Procedure on respiratory system Medication management"
+    prompt = "Cough 2mt-4mt Drug therapy 12d-20d Ex-Smoker Cough 1d Lymphocytes: Normal Plasma proteins: High Urea serum: Low Test request : Thyroid Function Test: Normal Renal function tests: High Test request : Serum electrolytes: Normal Red blood cell count: High Cholesterol triglycerides: Normal Eosinophil count: High ALP: High Platelets: Normal Creatinine serum: Normal Bilirubin: Normal Hemoglobin: High MCV: Normal Albumin serum: High WBC: Normal MCHC - Mean corpuscular haemoglobin concentration: High Monocyte count: Normal Laboratory test observable Basophil count: Normal Neutrophils: Normal ALT: Normal Haematocrit - PCV: High Glucose 2mt-4mt Referral to surgeon Swelling 7d-12d Bp Diastolic High Blood Pressure Bp Systolic High 20d-30d"
     print(f"PROMPT: {prompt}\n")
     print("MODEL OUTPUT:")
 
