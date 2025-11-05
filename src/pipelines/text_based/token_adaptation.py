@@ -5,7 +5,6 @@ from unsloth import FastLanguageModel
 import torch.nn.functional as F
 import pandas as pd
 
-from src.pipelines.text_based.utils import translate_tokens_with_bins
 
 class EHRTokenTranslator:
     """
