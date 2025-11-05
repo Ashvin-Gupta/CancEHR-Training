@@ -130,7 +130,6 @@ class EHRTokenTranslator:
                 if concept and value_bin: # Only add if both are valid
                     # Create the new combined token
                     translated_concepts.append(f"{concept}: {value_bin}") 
-                    print(f"Combined token: {concept}: {value_bin} from EHRTokenTranslator")
                 
                 i += 2 # CRITICAL: Skip both the concept and its value
             
@@ -180,7 +179,6 @@ class EHRTokenTranslator:
 
         # Add new tokens
         num_new_tokens = tokenizer.add_tokens(tokens_to_add)
-        print(f"Tokens to add: {tokens_to_add}")
 
         # Add PAD token if needed
         if tokenizer.pad_token is None:
