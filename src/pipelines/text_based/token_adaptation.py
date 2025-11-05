@@ -74,12 +74,16 @@ class EHRTokenTranslator:
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
                 if int(token_string[1:]) <= 2:
                     return f"Low"
+                    print(f"Low from EHRTokenTranslator")
                 elif int(token_string[1:]) <= 6:
                     return f"Normal"
+                    print(f"Normal from EHRTokenTranslator")
                 elif int(token_string[1:]) <= 9:
                     return f"High"
+                    print(f"High from EHRTokenTranslator")
                 else:
                     return f"{token_string[1:]}"
+                    print(f"Unknown from EHRTokenTranslator")
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
                 return ""
             else:
