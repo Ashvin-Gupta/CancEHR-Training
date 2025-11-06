@@ -205,10 +205,10 @@ def main(config_path: str):
     val_text_list = extract_text(val_base_dataset, tokenizer)
 
     print("\nVerifying data - First 3 patient narratives:")
-    # for i in range(min(3, len(train_text_list))):
-    #     print(f"\n--- PATIENT {i} ---")
-    #     # Print the last 1000 chars
-    #     print(f"{train_text_list[i][:1000]}...")
+    for i in range(min(3, len(train_text_list))):
+        print(f"\n--- PATIENT {i} ---")
+        # Print the last 1000 chars
+        print(f"{train_text_list[i][:1000]}...")
 
     print("\n" + "=" * 80)
     print("Creating SFT datasets...")
