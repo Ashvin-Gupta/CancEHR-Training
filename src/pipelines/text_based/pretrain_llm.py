@@ -53,7 +53,7 @@ def extract_text(base_dataset, tokenizer):
             item = base_dataset[i]
             if item is not None:
                 # item['text'] is the narrative from UnifiedEHRDataset
-                text_list.append(item['text'] + ', ' + eos_token)
+                text_list.append(item['text'] + ' ' + eos_token)
         print(f"  - Extracted {len(text_list)} valid narratives.")
         return text_list
         
@@ -371,8 +371,8 @@ def main(config_path: str):
     
     full_token_list = tokenizer.tokenize(full_generated_text)
 
-    # Filter out the spacer tokens (which are ' ' for most models)
-    ehr_events_only = [tok for tok in full_token_list if tok != " "]
+    # Filter out the spacer tokens (which start with 'Ġ' and are JUST a space)
+    ehr_events_only = [tok for tok in full_token_list if tok != "Ġ"]
 
     # Join the "real" tokens with a comma and space
     readable_output = ", ".join(ehr_events_only)

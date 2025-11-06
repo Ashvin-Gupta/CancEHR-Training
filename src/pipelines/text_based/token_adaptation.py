@@ -158,8 +158,13 @@ class EHRTokenTranslator:
         num_new_tokens = tokenizer.add_tokens(tokens_to_add)
 
         # Add PAD token if needed
+        pad_token_was_added = False
         if tokenizer.pad_token is None:
             tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+            pad_token_was_added = True
+            print(f"PAD token was added to the tokenizer: {tokenizer.pad_token}")
+        else:
+            print(f"PAD token already exists in the tokenizer: {tokenizer.pad_token}")
 
         print(f"Added {num_new_tokens} new tokens. New vocab size = {len(tokenizer)}")
 
@@ -190,6 +195,10 @@ class EHRTokenTranslator:
                 sub_token_ids = original_tokenizer.encode(concept, add_special_tokens=False)
                 sub_embs = original_weights[sub_token_ids]
                 new_embeddings[new_token_id] = sub_embs.mean(dim=0).to(new_embeddings.device, dtype=new_embeddings.dtype)
+            if pad_token_was_added:
+                pad_token_id = tokenizer.pad_token_id
+                print(f"Initializing new [PAD] token at ID {pad_token_id} to zeros.")
+                new_embeddings[pad_token_id] = torch.zeros_like(new_embeddings[pad_token_id])
 
         print("All new token embeddings initialized successfully!")
         

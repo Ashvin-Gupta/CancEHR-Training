@@ -27,7 +27,7 @@ training:
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
   # Training hyperparameters
-  epochs: 3
+  epochs: 1
   batch_size: 8
   eval_batch_size: 4
   learning_rate: 1e-5
