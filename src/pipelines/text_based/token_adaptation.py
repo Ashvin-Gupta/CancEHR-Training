@@ -101,12 +101,19 @@ class EHRTokenTranslator:
         for token_string in token_strings:
             
             # If it's a measurable concept, add all 3 binned variations
-            if token_string.startswith('LAB//') or token_string.startswith('MEASUREMENT//') or token_string.startswith('BMI//') or token_string.startswith('HEIGHT//') or token_string.startswith('WEIGHT//'):
+            if token_string.startswith('LAB//') or token_string.startswith('MEASUREMENT//'):
                 concept = self._translate_token(token_string) # e.g., "HbA1c"
                 if concept:
                     translated_concepts.append(f"{concept}: Low")
                     translated_concepts.append(f"{concept}: Normal")
                     translated_concepts.append(f"{concept}: High")
+            if token_string.startswith('AGE_') or token_string.startswith('BMI//') or token_string.startswith('HEIGHT//') or token_string.startswith('WEIGHT//'):
+                concept = self._translate_token(token_string)
+                if concept:
+                    translated_concepts.append(f"{concept} Low")
+                    translated_concepts.append(f"{concept} Normal")
+                    translated_concepts.append(f"{concept} High")
+
             
             # If it's a quantile token, skip it
             elif token_string.startswith('Q') and token_string[1:].isdigit():

@@ -17,7 +17,7 @@ wandb:
 lora:
   r: 16
   target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-  lora_alpha: 16
+  lora_alpha: 32
   lora_dropout: 0.05
   bias: "none"
 
@@ -27,7 +27,7 @@ training:
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
   # Training hyperparameters
-  epochs: 6
+  epochs: 1
   batch_size: 8
   eval_batch_size: 4
   learning_rate: 1e-5
