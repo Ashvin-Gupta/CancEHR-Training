@@ -207,8 +207,25 @@ def main(config_path: str):
     print("\nVerifying data - First 3 patient narratives:")
     for i in range(min(3, len(train_text_list))):
         print(f"\n--- PATIENT {i} ---")
-        # Print the last 1000 chars
+        # Print the first 1000 chars
         print(f"{train_text_list[i][:1000]}...")
+        
+        # Tokenize and show token analysis
+        print(f"\n--- PATIENT {i} TOKENIZATION ---")
+        tokens = tokenizer.tokenize(train_text_list[i])
+        token_ids = tokenizer.encode(train_text_list[i], add_special_tokens=False)
+        
+        print(f"Text length: {len(train_text_list[i])} characters")
+        print(f"Number of tokens: {len(tokens)}")
+        print(f"Number of token IDs: {len(token_ids)}")
+        print(f"First 20 tokens: {tokens[:20]}")
+        print(f"First 20 token IDs: {token_ids[:20]}")
+        
+        # Show token-to-text mapping for first few tokens
+        print(f"Token-to-text mapping (first 10):")
+        for j in range(min(10, len(tokens))):
+            decoded = tokenizer.decode([token_ids[j]])
+            print(f"  Token {j}: '{tokens[j]}' -> ID {token_ids[j]} -> Decoded: '{decoded}'")
 
     print("\n" + "=" * 80)
     print("Creating SFT datasets...")
