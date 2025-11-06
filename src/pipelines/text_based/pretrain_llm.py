@@ -144,6 +144,7 @@ def main(config_path: str):
     
     translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"])
     unique_concepts = translator.extract_translated_concepts(data_config["vocab_filepath"])
+    print(f"Unique concepts: {unique_concepts}")
     
     # Perform token adaptation BEFORE applying LoRA
     model, tokenizer = translator.token_adaptation(
