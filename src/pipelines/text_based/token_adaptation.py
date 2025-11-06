@@ -199,8 +199,15 @@ class EHRTokenTranslator:
                 pad_token_id = tokenizer.pad_token_id
                 print(f"Initializing new [PAD] token at ID {pad_token_id} to zeros.")
                 new_embeddings[pad_token_id] = torch.zeros_like(new_embeddings[pad_token_id])
+        output_embeddings = model.get_output_embeddings().weight.data
+        with torch.no_grad():
+            for concept in tokens_to_add:
+                new_token_id = tokenizer.convert_tokens_to_ids(concept)
+                
+                # Copy the initialized input embedding to the output embedding
+                output_embeddings[new_token_id] = new_embeddings[new_token_id]
 
-        print("All new token embeddings initialized successfully!")
+        print("All new input and output tokens embeddings initialized successfully!")
         
         # For checking the cosine similarity of the new embeddings to the original embeddings
         # embedding_weights = model.get_input_embeddings().weight.data
