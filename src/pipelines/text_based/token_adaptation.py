@@ -208,7 +208,9 @@ class EHRTokenTranslator:
                 output_embeddings[new_token_id] = new_embeddings[new_token_id]
 
         print("All new input and output tokens embeddings initialized successfully!")
-        
+        print(f'Length of tokenizer: {len(tokenizer)}')
+        print(f'Length of input embeddings: {model.get_input_embeddings().weight.data.shape[0]}')
+        print(f'Length of output embeddings: {model.get_output_embeddings().weight.data.shape[0]}')
         # For checking the cosine similarity of the new embeddings to the original embeddings
         # embedding_weights = model.get_input_embeddings().weight.data
         # for concept in tokens_to_add:
