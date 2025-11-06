@@ -122,6 +122,9 @@ class EHRTokenTranslator:
         unique_concepts = sorted(list(set(translated_concepts)))
         print(f"Extracted {len(unique_concepts)} unique concepts from vocabulary")
         print(f"Total vocabulary size: {len(vocab_df)}")
+
+        for concept in unique_concepts[:10]:
+            print(f"{concept}")
         
         return unique_concepts
     
@@ -176,8 +179,19 @@ class EHRTokenTranslator:
             load_in_4bit=load_in_4bit,
         )
 
+        print("\n--- DEBUG: Checking Model Layer Dimensions ---")
+        input_embeds_before = model.get_input_embeddings()
+        output_embeds_before = model.get_output_embeddings()
+        print(f"Input embeddings BEFORE resize:  {input_embeds_before.weight.shape}")
+        print(f"Output embeddings BEFORE resize: {output_embeds_before.weight.shape}")
+
         # Now resize embeddings to match the tokenizer
         model.resize_token_embeddings(len(tokenizer))
+
+        input_embeds_after = model.get_input_embeddings()
+        output_embeds_after = model.get_output_embeddings()
+        print(f"Input embeddings AFTER resize:   {input_embeds_after.weight.shape}")
+        print(f"Output embeddings AFTER resize:  {output_embeds_after.weight.shape}")
 
         # Initialize the new embeddings (average of sub-token embeddings)
         original_tokenizer = AutoTokenizer.from_pretrained(original_model_name)
@@ -187,30 +201,53 @@ class EHRTokenTranslator:
             dtype=torch.float16,
         )
         original_weights = base_model.get_input_embeddings().weight.data.cpu().float()
+        del base_model
 
-        new_embeddings = model.get_input_embeddings().weight.data
+        new_input_embeddings = model.get_input_embeddings().weight.data
+        new_output_embeddings = model.get_output_embeddings().weight.data
+
+        print("Initializing new token weights in INPUT and OUTPUT layers...")
         with torch.no_grad():
             for concept in tokens_to_add:
                 new_token_id = tokenizer.convert_tokens_to_ids(concept)
                 sub_token_ids = original_tokenizer.encode(concept, add_special_tokens=False)
-                sub_embs = original_weights[sub_token_ids]
-                new_embeddings[new_token_id] = sub_embs.mean(dim=0).to(new_embeddings.device, dtype=new_embeddings.dtype)
-            if pad_token_was_added:
-                pad_token_id = tokenizer.pad_token_id
-                print(f"Initializing new [PAD] token at ID {pad_token_id} to zeros.")
-                new_embeddings[pad_token_id] = torch.zeros_like(new_embeddings[pad_token_id])
-        output_embeddings = model.get_output_embeddings().weight.data
-        with torch.no_grad():
-            for concept in tokens_to_add:
-                new_token_id = tokenizer.convert_tokens_to_ids(concept)
                 
-                # Copy the initialized input embedding to the output embedding
-                output_embeddings[new_token_id] = new_embeddings[new_token_id]
+                # if not sub_token_ids:
+                #     print(f"  Warning: Concept '{concept}' has no sub-tokens. Initializing as zero.")
+                #     avg_emb = torch.zeros(original_weights.shape[1])
+                # else:
+                sub_embs = original_weights[sub_token_ids]
+                avg_emb = sub_embs.mean(dim=0)
 
-        print("All new input and output tokens embeddings initialized successfully!")
+                # Assign to both input and output layers
+                avg_emb_typed = avg_emb.to(new_input_embeddings.device, dtype=new_input_embeddings.dtype)
+                new_input_embeddings[new_token_id] = avg_emb_typed
+                new_output_embeddings[new_token_id] = avg_emb_typed
+
         print(f'Length of tokenizer: {len(tokenizer)}')
         print(f'Length of input embeddings: {model.get_input_embeddings().weight.data.shape[0]}')
         print(f'Length of output embeddings: {model.get_output_embeddings().weight.data.shape[0]}')
+
+
+        print("\n--- DEBUG: Verifying Initialization (Checking one token) ---")
+        if tokens_to_add:
+            test_token_str = tokens_to_add[0]
+            test_token_id = tokenizer.convert_tokens_to_ids(test_token_str)
+            print(f"Checking token: '{test_token_str}' (ID: {test_token_id})")
+            
+            input_w = new_input_embeddings[test_token_id]
+            output_w = new_output_embeddings[test_token_id]
+            
+            print(f"  Input Embed (mean):  {input_w.mean().item():.4f}")
+            print(f"  Output Embed (mean): {output_w.mean().item():.4f}")
+            
+            if input_w.mean().item() == 0:
+                print("  WARNING: Test token embedding is all zeros. Check `original_tokenizer.encode` step.")
+            else:
+                print("  SUCCESS: Test token is non-zero.")
+        else:
+            print("  No new tokens were added, skipping verification.")
+        print("--------------------------------------------------------\n")
         # For checking the cosine similarity of the new embeddings to the original embeddings
         # embedding_weights = model.get_input_embeddings().weight.data
         # for concept in tokens_to_add:
