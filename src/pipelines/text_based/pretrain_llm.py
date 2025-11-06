@@ -218,12 +218,12 @@ def main(config_path: str):
         print(f"Text length: {len(train_text_list[i])} characters")
         print(f"Number of tokens: {len(tokens)}")
         print(f"Number of token IDs: {len(token_ids)}")
-        print(f"First 20 tokens: {tokens[:20]}")
-        print(f"First 20 token IDs: {token_ids[:20]}")
+        print(f"First 20 tokens: {tokens[:100]}")
+        print(f"First 20 token IDs: {token_ids[:100]}")
         
         # Show token-to-text mapping for first few tokens
         print(f"Token-to-text mapping (first 10):")
-        for j in range(min(10, len(tokens))):
+        for j in range(min(100, len(tokens))):
             decoded = tokenizer.decode([token_ids[j]])
             print(f"  Token {j}: '{tokens[j]}' -> ID {token_ids[j]} -> Decoded: '{decoded}'")
 
