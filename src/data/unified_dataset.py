@@ -200,7 +200,7 @@ class UnifiedEHRDataset(Dataset):
                 current_code = string_codes[i]
                 
                 # Check if the current token is a measurable concept
-                is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//', 'MEDICAL//BMI'))
+                is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//', 'MEDICAL//BMI', 'MEDICAL//bp_'))
                 has_next_token = (i + 1 < len(string_codes))
                 is_next_a_quantile = False
                 
