@@ -142,7 +142,7 @@ def main(config_path: str):
         device = "cpu"
         print(f"  - CUDA not available, using CPU")
     
-    translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"])
+    translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"], data_config["region_lookup_filepath"])
     unique_concepts = translator.extract_translated_concepts(data_config["vocab_filepath"])
     print(f"Unique concepts: {unique_concepts}")
     
@@ -182,6 +182,7 @@ def main(config_path: str):
         "labels_file": data_config["labels_filepath"],
         "medical_lookup_file": data_config["medical_lookup_filepath"],
         "lab_lookup_file": data_config["lab_lookup_filepath"],
+        "region_lookup_file": data_config["region_lookup_filepath"],
         "format": 'text',  # Use existing text format!
         "cutoff_months": data_config.get("cutoff_months", 1),  # Default 1-month cutoff
         "max_sequence_length": None  # No truncation - we'll pack sequences
@@ -218,8 +219,8 @@ def main(config_path: str):
         print(f"Text length: {len(train_text_list[i])} characters")
         print(f"Number of tokens: {len(tokens)}")
         print(f"Number of token IDs: {len(token_ids)}")
-        print(f"First 20 tokens: {tokens[:100]}")
-        print(f"First 20 token IDs: {token_ids[:100]}")
+        print(f"First 100 tokens: {tokens[:100]}")
+        print(f"First 100 token IDs: {token_ids[:100]}")
         
         # Show token-to-text mapping for first few tokens
         print(f"Token-to-text mapping (first 10):")
