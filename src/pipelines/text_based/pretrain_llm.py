@@ -390,7 +390,8 @@ def main(config_path: str):
     
     warmup_args = TrainingArguments(
         output_dir=training_config['output_dir'],
-        num_train_epochs=1,
+        # num_train_epochs=1,
+        num_train_steps=200,
         learning_rate=5e-4,
         per_device_train_batch_size=training_config['batch_size'],
         logging_steps=50,
@@ -410,8 +411,9 @@ def main(config_path: str):
 
     warmup_trainer.train()
 
-    for p in model.parameters():
-        p.requires_grad = True
+    for name, param in model.named_parameters():
+        if 'lora' in name or 'adapter' in name:
+            param.requires_grad = True
 
     model = FastLanguageModel.get_peft_model(
         model,
