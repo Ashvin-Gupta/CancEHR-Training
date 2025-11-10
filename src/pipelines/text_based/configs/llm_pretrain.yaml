@@ -51,7 +51,7 @@ training:
 data:
   cutoff_months: 1  # Remove last 1 month before diagnosis for cancer patients
   data_dir: "/data/scratch/qc25022/gallbladder/tokenised_data/cprd_upgi/"
-  vocab_filepath: "/data/scratch/qc25022/gallbladder/tokenised_data/cprd_test/vocab.csv"
+  vocab_filepath: "/data/scratch/qc25022/gallbladder/tokenised_data/cprd_upgi/vocab.csv"
   labels_filepath: "/data/scratch/qc25022/upgi/master_subject_labels.csv"
   medical_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/MedicalDictTranslation2.csv"
   lab_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/LabLookUP.csv"
