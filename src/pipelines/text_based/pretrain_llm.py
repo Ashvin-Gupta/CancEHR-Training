@@ -93,7 +93,7 @@ def check_tokenization_integrity(dataset, tokenizer, original_vocab_size: int, a
     
     if unexpected_tokens_found:
         print("\n🚨 CRITICAL ERROR: Found UNEXPECTED BASE MODEL TOKENS in Training Data:")
-        for token_str, count in unexpected_tokens_found.most_common(20):
+        for token_str, count in unexpected_tokens_found.most_common(30):
             print(f"  - {token_str}: Found {count} times.")
         
         print("\nThese tokens are likely causing the model collapse (e.g., '2', 'word count').")
@@ -393,7 +393,7 @@ def main(config_path: str):
     train_dataset = Dataset.from_dict({"text": train_text_list})
     val_dataset = Dataset.from_dict({"text": val_text_list})
 
-    V_orig = 151740
+    V_orig = 151936
     allowed_ids = {}
     check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 
