@@ -258,6 +258,13 @@ class EHRTokenTranslator:
         print(f"Old embeddings norm std: {old_norm.std().item():.4f}")
         print(f"New embeddings norm std: {new_norm.std().item():.4f}")
 
+        with torch.no_grad():
+            old_std = old_emb.std()
+            new_std = new_emb.std()
+            scale = (old_std / new_std).clamp(0.5, 2.0)
+            model.get_input_embeddings().weight[-len(tokens_to_add):] *= scale
+            model.get_output_embeddings().weight[-len(tokens_to_add):] *= scale
+            print(f"Scaled new embeddings by {scale.item():.4f} to match variance")
 
         print("\n--- DEBUG: Verifying Initialization (Checking one token) ---")
         if tokens_to_add:
