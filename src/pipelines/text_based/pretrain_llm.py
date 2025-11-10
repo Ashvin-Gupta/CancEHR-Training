@@ -53,10 +53,37 @@ def extract_text(base_dataset, tokenizer):
             item = base_dataset[i]
             if item is not None:
                 # item['text'] is the narrative from UnifiedEHRDataset
-                text_list.append(item['text'] + ' ' + eos_token)
+                text_list.append(item['text'] + eos_token)
         print(f"  - Extracted {len(text_list)} valid narratives.")
         return text_list
+
+def verify_patient(train_text_list, tokenizer):
+    print("\nVerifying data - First 3 patient narratives:")
+    for i in range(min(3, len(train_text_list))):
+        print(f"\n--- PATIENT {i} ---")
+        # Print the first 1000 chars
+        print(f"{train_text_list[i][:1000]}...")
         
+        # Tokenize and show token analysis
+        print(f"\n--- PATIENT {i} TOKENIZATION ---")
+        tokens = tokenizer.tokenize(train_text_list[i])
+        token_ids = tokenizer.encode(train_text_list[i], add_special_tokens=False)
+        
+        print(f"Text length: {len(train_text_list[i])} characters")
+        print(f"Number of tokens: {len(tokens)}")
+        print(f"Number of token IDs: {len(token_ids)}")
+        print(f"First 100 tokens: {tokens[:100]}")
+        print(f"First 100 token IDs: {token_ids[:100]}")
+        
+        # Show token-to-text mapping for first few tokens
+        print(f"Token-to-text mapping (first 10):")
+        for j in range(min(100, len(tokens))):
+            decoded = tokenizer.decode([token_ids[j]])
+            print(f"  Token {j}: '{tokens[j]}' -> ID {token_ids[j]} -> Decoded: '{decoded}'")
+
+    print("\n" + "=" * 80)
+    print("Creating SFT datasets...")
+    print("=" * 80)
 
 
 def main(config_path: str):
@@ -205,32 +232,35 @@ def main(config_path: str):
     train_text_list = extract_text(train_base_dataset, tokenizer)
     val_text_list = extract_text(val_base_dataset, tokenizer)
 
-    print("\nVerifying data - First 3 patient narratives:")
-    for i in range(min(3, len(train_text_list))):
-        print(f"\n--- PATIENT {i} ---")
-        # Print the first 1000 chars
-        print(f"{train_text_list[i][:1000]}...")
-        
-        # Tokenize and show token analysis
-        print(f"\n--- PATIENT {i} TOKENIZATION ---")
-        tokens = tokenizer.tokenize(train_text_list[i])
-        token_ids = tokenizer.encode(train_text_list[i], add_special_tokens=False)
-        
-        print(f"Text length: {len(train_text_list[i])} characters")
-        print(f"Number of tokens: {len(tokens)}")
-        print(f"Number of token IDs: {len(token_ids)}")
-        print(f"First 100 tokens: {tokens[:100]}")
-        print(f"First 100 token IDs: {token_ids[:100]}")
-        
-        # Show token-to-text mapping for first few tokens
-        print(f"Token-to-text mapping (first 10):")
-        for j in range(min(100, len(tokens))):
-            decoded = tokenizer.decode([token_ids[j]])
-            print(f"  Token {j}: '{tokens[j]}' -> ID {token_ids[j]} -> Decoded: '{decoded}'")
+    # Verify the data
+    verify_patient(train_text_list, tokenizer)
 
-    print("\n" + "=" * 80)
-    print("Creating SFT datasets...")
-    print("=" * 80)
+    # print("\nVerifying data - First 3 patient narratives:")
+    # for i in range(min(3, len(train_text_list))):
+    #     print(f"\n--- PATIENT {i} ---")
+    #     # Print the first 1000 chars
+    #     print(f"{train_text_list[i][:1000]}...")
+        
+    #     # Tokenize and show token analysis
+    #     print(f"\n--- PATIENT {i} TOKENIZATION ---")
+    #     tokens = tokenizer.tokenize(train_text_list[i])
+    #     token_ids = tokenizer.encode(train_text_list[i], add_special_tokens=False)
+        
+    #     print(f"Text length: {len(train_text_list[i])} characters")
+    #     print(f"Number of tokens: {len(tokens)}")
+    #     print(f"Number of token IDs: {len(token_ids)}")
+    #     print(f"First 100 tokens: {tokens[:100]}")
+    #     print(f"First 100 token IDs: {token_ids[:100]}")
+        
+    #     # Show token-to-text mapping for first few tokens
+    #     print(f"Token-to-text mapping (first 10):")
+    #     for j in range(min(100, len(tokens))):
+    #         decoded = tokenizer.decode([token_ids[j]])
+    #         print(f"  Token {j}: '{tokens[j]}' -> ID {token_ids[j]} -> Decoded: '{decoded}'")
+
+    # print("\n" + "=" * 80)
+    # print("Creating SFT datasets...")
+    # print("=" * 80)
 
     train_dataset = Dataset.from_dict({"text": train_text_list})
     val_dataset = Dataset.from_dict({"text": val_text_list})
@@ -388,14 +418,23 @@ def main(config_path: str):
     # Combine all the chunks into one full string
     full_generated_text = "".join(all_generated_chunks)
     
-    full_token_list = tokenizer.tokenize(full_generated_text)
-
-    # Filter out the spacer tokens (which start with 'Ġ' and are JUST a space)
-    ehr_events_only = [tok for tok in full_token_list if tok != "Ġ"]
-
-    # Join the "real" tokens with a comma and space
-    readable_output = ", ".join(ehr_events_only)
-
+    full_decoded = tokenizer.decode(tokenizer.encode(full_generated_text, add_special_tokens=False))
+    
+    # For display, we'll add spaces between tokens for readability
+    # First, get all the token IDs that were generated
+    generated_token_ids = tokenizer.encode(full_generated_text, add_special_tokens=False)
+    
+    # Decode each token individually to get the actual event strings
+    event_tokens = []
+    for token_id in generated_token_ids:
+        decoded_token = tokenizer.decode([token_id])
+        # Remove any special tokens or padding
+        if decoded_token and decoded_token not in [tokenizer.eos_token, tokenizer.pad_token]:
+            event_tokens.append(decoded_token)
+    
+    # Join with spaces for readability when displaying
+    readable_output = " ".join(event_tokens)
+    
     # Use textwrap.fill to wrap the final, readable string
     print(textwrap.fill(readable_output, width=max_print_width))
     print("\n")

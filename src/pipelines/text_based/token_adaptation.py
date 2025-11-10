@@ -142,9 +142,9 @@ class EHRTokenTranslator:
         print(f"Extracted {len(unique_concepts)} unique concepts from vocabulary")
         print(f"Total vocabulary size: {len(vocab_df)}")
 
-        print(f"Unique concepts: {unique_concepts}")
-        # for concept in unique_concepts[:10]:
-        #     print(f"{concept}")
+        # print(f"Unique concepts: {unique_concepts}")
+        for concept in unique_concepts[100:110]:
+            print(f"{concept}")
         
         return unique_concepts
     

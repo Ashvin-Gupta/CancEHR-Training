@@ -229,9 +229,8 @@ class UnifiedEHRDataset(Dataset):
                     
                     i += 1 # CRITICAL: Skip just this one token
                 
-                # --- END OF NEW LOGIC ---
-
-            narrative = " ".join(translated_phrases)
+            # Changed to no space but would need to change this for the bert initialisation
+            narrative = "".join(translated_phrases)
             
             return {
                 "text": narrative,
