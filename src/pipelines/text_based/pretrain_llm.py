@@ -381,11 +381,11 @@ def main(config_path: str):
     allowed_ids = {}
     check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 
-
+    model = FastLanguageModel.get_peft_model(model, **lora_config)
     # Freeze everything but embeddings and then do a small warm up
     for name, param in model.named_parameters():
         param.requires_grad = False
-        if any(x in name for x in ["embed_tokens", "lm_head"]):
+        if any(x in name for x in ["embed_tokens", "lm_head", "lora"]):
             param.requires_grad = True
     
     warmup_args = TrainingArguments(
@@ -409,6 +409,9 @@ def main(config_path: str):
     )
 
     warmup_trainer.train()
+
+    for p in model.parameters():
+        p.requires_grad = True
 
     model = FastLanguageModel.get_peft_model(
         model,
