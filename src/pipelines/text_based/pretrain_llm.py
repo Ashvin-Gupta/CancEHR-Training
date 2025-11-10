@@ -393,7 +393,7 @@ def main(config_path: str):
     train_dataset = Dataset.from_dict({"text": train_text_list})
     val_dataset = Dataset.from_dict({"text": val_text_list})
 
-    V_orig = 151936
+    V_orig = 151669
     allowed_ids = {}
     check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 

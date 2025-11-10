@@ -251,6 +251,12 @@ class EHRTokenTranslator:
         print(f"New embeddings mean: {new_emb.mean().item():.4f}")
         print(f"Old embeddings std: {old_emb.std().item():.4f}")
         print(f"New embeddings std: {new_emb.std().item():.4f}")
+        old_norm = model.get_input_embeddings().weight.data.norm(dim=1)
+        new_norm = model.get_input_embeddings().weight.data[-len(tokens_to_add):].norm(dim=1)
+        print(f"Old embeddings norm: {old_norm.mean().item():.4f}")
+        print(f"New embeddings norm: {new_norm.mean().item():.4f}")
+        print(f"Old embeddings norm std: {old_norm.std().item():.4f}")
+        print(f"New embeddings norm std: {new_norm.std().item():.4f}")
 
 
         print("\n--- DEBUG: Verifying Initialization (Checking one token) ---")
