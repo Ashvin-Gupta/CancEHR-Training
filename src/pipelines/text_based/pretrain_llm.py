@@ -171,7 +171,7 @@ def main(config_path: str):
     
     translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"], data_config["region_lookup_filepath"])
     unique_concepts = translator.extract_translated_concepts(data_config["vocab_filepath"])
-    print(f"Unique concepts: {unique_concepts}")
+    # print(f"Unique concepts: {unique_concepts}")
     
     # Perform token adaptation BEFORE applying LoRA
     model, tokenizer = translator.token_adaptation(
@@ -234,33 +234,6 @@ def main(config_path: str):
 
     # Verify the data
     verify_patient(train_text_list, tokenizer)
-
-    # print("\nVerifying data - First 3 patient narratives:")
-    # for i in range(min(3, len(train_text_list))):
-    #     print(f"\n--- PATIENT {i} ---")
-    #     # Print the first 1000 chars
-    #     print(f"{train_text_list[i][:1000]}...")
-        
-    #     # Tokenize and show token analysis
-    #     print(f"\n--- PATIENT {i} TOKENIZATION ---")
-    #     tokens = tokenizer.tokenize(train_text_list[i])
-    #     token_ids = tokenizer.encode(train_text_list[i], add_special_tokens=False)
-        
-    #     print(f"Text length: {len(train_text_list[i])} characters")
-    #     print(f"Number of tokens: {len(tokens)}")
-    #     print(f"Number of token IDs: {len(token_ids)}")
-    #     print(f"First 100 tokens: {tokens[:100]}")
-    #     print(f"First 100 token IDs: {token_ids[:100]}")
-        
-    #     # Show token-to-text mapping for first few tokens
-    #     print(f"Token-to-text mapping (first 10):")
-    #     for j in range(min(100, len(tokens))):
-    #         decoded = tokenizer.decode([token_ids[j]])
-    #         print(f"  Token {j}: '{tokens[j]}' -> ID {token_ids[j]} -> Decoded: '{decoded}'")
-
-    # print("\n" + "=" * 80)
-    # print("Creating SFT datasets...")
-    # print("=" * 80)
 
     train_dataset = Dataset.from_dict({"text": train_text_list})
     val_dataset = Dataset.from_dict({"text": val_text_list})
@@ -376,7 +349,7 @@ def main(config_path: str):
     FastLanguageModel.for_inference(model)
 
     # Define a sample prompt
-    prompt = "Cough 2mt-4mt Drug therapy 12d-20d Ex-Smoker Cough 1d Lymphocytes: Normal Plasma proteins: High Urea serum: Low Test request : Thyroid Function Test: Normal Renal function tests: High Test request : Serum electrolytes: Normal Red blood cell count: High Cholesterol triglycerides: Normal Eosinophil count: High ALP: High Platelets: Normal Creatinine serum: Normal Bilirubin: Normal Hemoglobin: High MCV: Normal Albumin serum: High WBC: Normal MCHC - Mean corpuscular haemoglobin concentration: High Monocyte count: Normal Laboratory test observable Basophil count: Normal Neutrophils: Normal ALT: Normal Haematocrit - PCV: High Glucose 2mt-4mt Referral to surgeon Swelling 7d-12d Bp Diastolic High Blood Pressure Bp Systolic High 20d-30d"
+    prompt = '65-69GENDER FEMALEETHNICITY WHITEREGION North WestBMI: highFrailty Index score: low1dFrailty Index score: low4d-7dOphthalmological referral7d-12dFrailty Index score: low1dFrailty Index score: low2d-4dDermatitisFrailty Index score: low1d-2dDermatological referral20d-30dDermatitisContact dermatitis due to solar radiation7d-12dFrailty Index score: low20d-30dCapsulotomy of lens capsule7d-12dPsoriasis20d-30dOral administration of treatment12d-20dFrailty Index score: low7d-12dFrailty Index score: low4d-7dEnteric microscopy, culture and sensitivitiesClostridium difficile glutamate dehydrogenase immunoassay2d-4dFrailty Index score: normal7d-12dEosinophil count: normalSerum vitamin B12 level: normalAcetoacetate level: highAcute kidney injury warning stageTest request : Serum TSH level: high'
     print(f"PROMPT: {prompt}\n")
     print("MODEL OUTPUT:")
 
