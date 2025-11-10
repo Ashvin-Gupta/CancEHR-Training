@@ -18,7 +18,7 @@ import yaml
 import os
 from datetime import datetime
 import wandb
-from collections import defaultdict
+from collections import defaultdict, Counter
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
 from datasets import Dataset
@@ -39,6 +39,69 @@ from huggingface_hub import login
 
 from src.data.unified_dataset import UnifiedEHRDataset
 from src.pipelines.text_based.token_adaptation import EHRTokenTranslator
+
+def check_tokenization_integrity(dataset, tokenizer, original_vocab_size: int, allowed_base_tokens: set):
+    """
+    Checks if any unexpected base model tokens (IDs < original_vocab_size) 
+    are present in the tokenized training data.
+
+    Args:
+        dataset: The Hugging Face Dataset or a list of raw text narratives.
+        tokenizer: The tokenizer object (with added tokens).
+        original_vocab_size: The token ID that marks the start of new medical tokens.
+        allowed_base_tokens: A set of token IDs for "normal", "high", "low", etc., 
+                             that you *expect* to be in the base vocabulary.
+    """
+    unexpected_tokens_found = Counter()
+    total_new_tokens = 0
+    total_patients_checked = 0
+    
+    print(f"\n--- Running Tokenization Integrity Check ---")
+    print(f"Original Vocab Size (Boundary): {original_vocab_size}")
+
+    for i, item in enumerate(dataset):
+        # Assuming item is the raw text string from your dataset
+        if isinstance(item, dict) and 'text' in item:
+            text = item['text']
+        elif isinstance(item, str):
+            text = item
+        else:
+            continue
+            
+        token_ids = tokenizer.encode(text, add_special_tokens=False)
+        total_patients_checked += 1
+        
+        # 1. Check for tokens below the threshold
+        for token_id in token_ids:
+            if token_id >= original_vocab_size:
+                total_new_tokens += 1
+                continue
+            
+            # Token ID is in the original base vocabulary range
+            if token_id not in allowed_base_tokens:
+                # We found an UNEXPECTED token from the original model's vocabulary
+                decoded_token = tokenizer.decode([token_id])
+                unexpected_tokens_found[f"ID {token_id}: '{decoded_token}'"] += 1
+
+        if total_patients_checked % 1000 == 0 and total_patients_checked > 0:
+            print(f"  - Checked {total_patients_checked} patients...")
+            
+    # --- Report Results ---
+    print("-" * 80)
+    print(f"CHECK COMPLETE. Total Patients Checked: {total_patients_checked}")
+    print(f"Total tokens from new vocabulary (ID >= {original_vocab_size}): {total_new_tokens}")
+    
+    if unexpected_tokens_found:
+        print("\n🚨 CRITICAL ERROR: Found UNEXPECTED BASE MODEL TOKENS in Training Data:")
+        for token_str, count in unexpected_tokens_found.most_common(20):
+            print(f"  - {token_str}: Found {count} times.")
+        
+        print("\nThese tokens are likely causing the model collapse (e.g., '2', 'word count').")
+        print("ACTION: You must sanitize your data to ensure these base tokens are replaced by a single, new medical event token, or ensure the tokenizer is explicitly told to tokenize them as expected.")
+        return False
+    else:
+        print("\n✅ Tokenization Check Passed: No unexpected base model tokens found.")
+        return True
 
 
 def extract_text(base_dataset, tokenizer):
@@ -329,6 +392,10 @@ def main(config_path: str):
 
     train_dataset = Dataset.from_dict({"text": train_text_list})
     val_dataset = Dataset.from_dict({"text": val_text_list})
+
+    V_orig = 151740
+    allowed_ids = {}
+    check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 
     # 6. Set Up Training Arguments
     print("\n" + "=" * 80)

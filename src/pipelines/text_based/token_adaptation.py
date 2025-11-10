@@ -71,8 +71,6 @@ class EHRTokenTranslator:
             elif token_string.startswith('LAB//'):
                 code = token_string.split('//')[1].upper()
                 return self.lab_lookup.get(code, code.replace('_', ' ').title())
-            # elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
-            #     return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
             elif token_string.startswith(('GENDER//', 'ETHNICITY//')):
                 parts = token_string.split('//')
                 return f"{parts[0]} {parts[1]}"
@@ -111,7 +109,7 @@ class EHRTokenTranslator:
         for token_string in token_strings:
             
             # If it's a measurable concept, add all 3 binned variations
-            if token_string.startswith('LAB//') or token_string.startswith('MEASUREMENT//'):
+            if token_string.startswith('LAB//') or token_string.startswith('MEASUREMENT//') or token_string.startswith('MEDICAL//bp_'):
                 concept = self._translate_token(token_string) # e.g., "HbA1c"
                 if concept:
                     translated_concepts.append(f"{concept}: low")
@@ -231,11 +229,7 @@ class EHRTokenTranslator:
             for concept in tokens_to_add:
                 new_token_id = tokenizer.convert_tokens_to_ids(concept)
                 sub_token_ids = original_tokenizer.encode(concept, add_special_tokens=False)
-                
-                # if not sub_token_ids:
-                #     print(f"  Warning: Concept '{concept}' has no sub-tokens. Initializing as zero.")
-                #     avg_emb = torch.zeros(original_weights.shape[1])
-                # else:
+              
                 sub_embs = original_weights[sub_token_ids]
                 avg_emb = sub_embs.mean(dim=0)
 
