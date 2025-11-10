@@ -162,6 +162,7 @@ class EHRTokenTranslator:
 
         # Check for original tokens
         current_vocab = tokenizer.get_vocab().keys()
+        print(f"Current vocab size: {len(current_vocab)}")
         tokens_to_add = []
         tokens_that_exist = []
 
@@ -241,6 +242,15 @@ class EHRTokenTranslator:
         print(f'Length of tokenizer: {len(tokenizer)}')
         print(f'Length of input embeddings: {model.get_input_embeddings().weight.data.shape[0]}')
         print(f'Length of output embeddings: {model.get_output_embeddings().weight.data.shape[0]}')
+
+        old_emb = model.get_input_embeddings().weight.data[:-len(tokens_to_add)]
+        new_emb = model.get_input_embeddings().weight.data[-len(tokens_to_add):]
+        print(f"Old embeddings: {old_emb.shape}")
+        print(f"New embeddings: {new_emb.shape}")
+        print(f"Old embeddings mean: {old_emb.mean().item():.4f}")
+        print(f"New embeddings mean: {new_emb.mean().item():.4f}")
+        print(f"Old embeddings std: {old_emb.std().item():.4f}")
+        print(f"New embeddings std: {new_emb.std().item():.4f}")
 
 
         print("\n--- DEBUG: Verifying Initialization (Checking one token) ---")
