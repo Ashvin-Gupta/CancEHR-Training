@@ -12,7 +12,7 @@ class EHRTokenTranslator:
     Uses the same translation logic as UnifiedEHRDataset.
     """
     
-    def __init__(self, medical_lookup_filepath, lab_lookup_filepath):
+    def __init__(self, medical_lookup_filepath, lab_lookup_filepath, region_lookup_filepath):
         """
         Initialize the translator with lookup tables.
         
@@ -31,6 +31,12 @@ class EHRTokenTranslator:
         self.lab_lookup = pd.Series(
             lab_df['term'].values, 
             index=lab_df['code'].astype(str).str.upper()
+        ).to_dict()
+
+        region_df = pd.read_csv(region_lookup_filepath)
+        self.region_lookup = pd.Series(
+            region_df['Description'].values, 
+            index=region_df['regionid'].astype(str).str.upper()
         ).to_dict()
     
     def _translate_token(self, token_string):
@@ -51,8 +57,10 @@ class EHRTokenTranslator:
             if token_string.startswith('<time_interval_'):
                 time_part = token_string.split('_')[-1].strip('>')
                 return f"{time_part}"
-            elif token_string.startswith('AGE_'):
+            elif token_string.startswith('AGE: '):
                 return f"{token_string}"
+            elif token_string.startswith('MEDICAL//BMI'):
+                return f"{token_string.split('//')[1]}"
             elif token_string.startswith('MEDICAL//'):
                 code = token_string.split('//')[1].upper()
                 return self.medical_lookup.get(code, code.replace('_', ' ').title())
@@ -63,16 +71,18 @@ class EHRTokenTranslator:
             elif token_string.startswith('LAB//'):
                 code = token_string.split('//')[1].upper()
                 return self.lab_lookup.get(code, code.replace('_', ' ').title())
-            elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
-                return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
+            # elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
+            #     return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
             elif token_string.startswith(('GENDER//', 'ETHNICITY//')):
                 parts = token_string.split('//')
-                return f"{parts[1]}"
+                return f"{parts[0]} {parts[1]}"
             elif token_string.startswith('REGION//'):
                 parts = token_string.split('//')
-                return f"{parts[1]}"
+                return f"{parts[0]} {self.region_lookup.get(parts[1], parts[1])}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                return ""
+                return f"Quantile {token_string[1:]}"
+            elif token_string.startswith('low') or token_string.startswith('normal') or token_string.startswith('high') or token_string.startswith('very low') or token_string.startswith('very high') and len(token_string) <= 9:
+                return f"{token_string}"
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
                 return ""
             else:
@@ -104,19 +114,21 @@ class EHRTokenTranslator:
             if token_string.startswith('LAB//') or token_string.startswith('MEASUREMENT//'):
                 concept = self._translate_token(token_string) # e.g., "HbA1c"
                 if concept:
-                    translated_concepts.append(f"{concept}: Low")
-                    translated_concepts.append(f"{concept}: Normal")
-                    translated_concepts.append(f"{concept}: High")
-            if token_string.startswith('AGE_') or token_string.startswith('BMI//') or token_string.startswith('HEIGHT//') or token_string.startswith('WEIGHT//'):
+                    translated_concepts.append(f"{concept}: low")
+                    translated_concepts.append(f"{concept}: normal")
+                    translated_concepts.append(f"{concept}: high")
+            if token_string.startswith('MEDICAL//BMI'):
                 concept = self._translate_token(token_string)
                 if concept:
-                    translated_concepts.append(f"{concept} Low")
-                    translated_concepts.append(f"{concept} Normal")
-                    translated_concepts.append(f"{concept} High")
+                    translated_concepts.append(f"{concept}: very low")
+                    translated_concepts.append(f"{concept}: low")
+                    translated_concepts.append(f"{concept}: normal")
+                    translated_concepts.append(f"{concept}: high")
+                    translated_concepts.append(f"{concept}: very high")
 
             
-            # If it's a quantile token, skip it
-            elif token_string.startswith('Q') and token_string[1:].isdigit():
+            # If it's a indicator token, skip it
+            elif token_string.startswith('low') or token_string.startswith('normal') or token_string.startswith('high') or token_string.startswith('very low') or token_string.startswith('very high') and len(token_string) <= 9:
                 continue
             
             # Otherwise, just translate and add the single token
@@ -130,8 +142,9 @@ class EHRTokenTranslator:
         print(f"Extracted {len(unique_concepts)} unique concepts from vocabulary")
         print(f"Total vocabulary size: {len(vocab_df)}")
 
-        for concept in unique_concepts[:10]:
-            print(f"{concept}")
+        print(f"Unique concepts: {unique_concepts}")
+        # for concept in unique_concepts[:10]:
+        #     print(f"{concept}")
         
         return unique_concepts
     
@@ -274,10 +287,11 @@ if __name__ == "__main__":
     original_model_name = "Qwen/Qwen3-0.6B"
     unsloth_model_name = "unsloth/Qwen3-0.6B-Base-unsloth-bnb-4bit"
     new_concepts = ["myocardial infarction", "Current smoker", "Bp diastolic", "7"]
-    medical_lookup_filepath = "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv"
-    lab_lookup_filepath = "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv"
+    medical_lookup_filepath = "/home/ashvingupta/Documents/PhD/Projects/nightingale/src/resources/MedicalDictTranslation2.csv"
+    lab_lookup_filepath = "/home/ashvingupta/Documents/PhD/Projects/nightingale/src/resources/LabLookUP.csv"
     vocab_filepath = "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv"
-    translator = EHRTokenTranslator(medical_lookup_filepath, lab_lookup_filepath)
+    region_lookup_filepath = "/home/ashvingupta/Documents/PhD/Projects/nightingale/src/resources/RegionLookUp.csv"
+    translator = EHRTokenTranslator(medical_lookup_filepath, lab_lookup_filepath, region_lookup_filepath)
     unique_concepts = translator.extract_translated_concepts(vocab_filepath)
     print(f"Unique concepts: {unique_concepts}")
     # model, tokenizer = translator.token_adaptation(original_model_name, unsloth_model_name, unique_concepts, max_seq_length=512, load_in_4bit=True)

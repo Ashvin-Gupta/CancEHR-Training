@@ -17,7 +17,7 @@ class UnifiedEHRDataset(Dataset):
     4.  Dynamically truncate patient timelines based on a specified cutoff window
         before the cancer diagnosis date.
     """
-    def __init__(self, data_dir, vocab_file, labels_file, medical_lookup_file, lab_lookup_file,
+    def __init__(self, data_dir, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file,
                  cutoff_months=None, max_sequence_length=512, format='tokens', split='train', tokenizer=None):
         
         self.format = format
@@ -26,7 +26,7 @@ class UnifiedEHRDataset(Dataset):
         self.tokenizer = tokenizer  # Store for pretrain format
         
         # Load all necessary mappings and lookup tables
-        self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file)
+        self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file)
         # Load the patient records from the .pkl files for the specified split
         if split == 'tuning' or split == 'held_out':
             self.patient_records = self._load_data(data_dir, split, limit=30)
@@ -34,7 +34,7 @@ class UnifiedEHRDataset(Dataset):
             # Chaning to 5 to see result and inference
             self.patient_records = self._load_data(data_dir, split)
 
-    def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file):
+    def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""
         
         vocab_df = pd.read_csv(vocab_file)
@@ -46,6 +46,9 @@ class UnifiedEHRDataset(Dataset):
             
             lab_df = pd.read_csv(lab_lookup_file)
             self.lab_lookup = pd.Series(lab_df['term'].values, index=lab_df['code'].astype(str).str.upper()).to_dict()
+
+            region_df = pd.read_csv(region_lookup_file)
+            self.region_lookup = pd.Series(region_df['Description'].values, index=region_df['regionid'].astype(str).str.upper()).to_dict()
 
         labels_df = pd.read_csv(labels_file)
         labels_df['string_label'] = labels_df.apply(lambda row: 'Control' if row['is_case'] == 0 else row['site'], axis=1)
@@ -87,8 +90,10 @@ class UnifiedEHRDataset(Dataset):
             if token_string.startswith('<time_interval_'):
                 time_part = token_string.split('_')[-1].strip('>')
                 return f"{time_part}"
-            elif token_string.startswith('AGE_'):
+            elif token_string.startswith('AGE: '):
                 return f"{token_string}"
+            elif token_string.startswith('MEDICAL//BMI'):
+                return f"{token_string.split('//')[1]}"
             elif token_string.startswith('MEDICAL//'):
                 code = token_string.split('//')[1].upper()
                 return self.medical_lookup.get(code, code.replace('_', ' ').title())
@@ -99,23 +104,26 @@ class UnifiedEHRDataset(Dataset):
             elif token_string.startswith('LAB//'):
                 code = token_string.split('//')[1].upper()
                 return self.lab_lookup.get(code, code.replace('_', ' ').title())
-            elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
-                return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
+            # elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
+            #     return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
             elif token_string.startswith(('GENDER//', 'ETHNICITY//')):
                 parts = token_string.split('//')
-                return f"{parts[1]}"
+                return f"{parts[0]} {parts[1]}"
             elif token_string.startswith('REGION//'):
                 parts = token_string.split('//')
-                return f"{parts[1]}"
+                return f"{parts[0]} {self.region_lookup.get(parts[1], parts[1])}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                if int(token_string[1:]) <= 2:
-                    return f"Low"
-                elif int(token_string[1:]) <= 6:
-                    return f"Normal"
-                elif int(token_string[1:]) <= 9:
-                    return f"High"
-                else:
-                    return f"{token_string[1:]}"
+                return f"Quantile {token_string[1:]}"
+            elif token_string.startswith('low') or token_string.startswith('normal') or token_string.startswith('high') or token_string.startswith('very low') or token_string.startswith('very high') and len(token_string) <= 9:
+                return f"{token_string}"
+                # if int(token_string[1:]) <= 2:
+                #     return f"Low"
+                # elif int(token_string[1:]) <= 6:
+                #     return f"Normal"
+                # elif int(token_string[1:]) <= 9:
+                #     return f"High"
+                # else:
+                #     return f"{token_string[1:]}"
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
                 return ""
             else:
@@ -192,14 +200,15 @@ class UnifiedEHRDataset(Dataset):
                 current_code = string_codes[i]
                 
                 # Check if the current token is a measurable concept
-                is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//', 'BMI//', 'HEIGHT//', 'WEIGHT//', 'AGE_'))
+                is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//', 'MEDICAL//BMI'))
                 has_next_token = (i + 1 < len(string_codes))
                 is_next_a_quantile = False
                 
                 if has_next_token:
                     next_code = string_codes[i+1]
+                    is_next_a_quantile = next_code.startswith('low') or next_code.startswith('normal') or next_code.startswith('high') or next_code.startswith('very low') or next_code.startswith('very high') and len(next_code) <= 9
                     # Check if the next token is a quantile (e.g., "Q2", "Q7")
-                    is_next_a_quantile = (next_code.startswith('Q') and next_code[1:].isdigit())
+                    # is_next_a_quantile = (next_code.startswith('Q') and next_code[1:].isdigit())
 
                 # If we have a measurable concept AND its quantile value, combine them
                 if is_measurable and is_next_a_quantile:
