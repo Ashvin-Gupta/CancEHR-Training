@@ -337,22 +337,6 @@ def main(config_path: str):
         load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
     )
 
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r = lora_config.get('r', 16),
-        target_modules = lora_config.get('target_modules', ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj", "embed_tokens", "lm_head"]), # Modules for Mistral/Llama
-        lora_alpha = lora_config.get('lora_alpha', 16),
-        lora_dropout = lora_config.get('lora_dropout', 0.05),
-        bias = lora_config.get('bias', "none"),
-        use_gradient_checkpointing = training_config.get('gradient_checkpointing', 'unsloth'),
-        random_state = 42,
-        use_rslora = lora_config.get('use_rslora', True),
-        loftq_config = lora_config.get('loftq_config', None),
-
-    )
-    print("  - Applied LoRA adapters (PEFT) to the model.")
-
-    
     # 4. Create Base Datasets (text format)
     print("\n" + "=" * 80)
     print("Creating datasets in 'text' format...")
@@ -396,6 +380,95 @@ def main(config_path: str):
     V_orig = 151669
     allowed_ids = {}
     check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
+
+
+    # Freeze everything but embeddings and then do a small warm up
+    for name, param in model.named_parameters():
+        param.requires_grad = False
+        if any(x in name for x in ["embed_tokens", "lm_head"]):
+            param.requires_grad = True
+    
+    warmup_args = TrainingArguments(
+        output_dir=training_config['output_dir'],
+        num_train_epochs=1,
+        learning_rate=5e-4,
+        per_device_train_batch_size=training_config['batch_size'],
+        logging_steps=50,
+        save_strategy="no",
+        report_to=report_to
+    )
+
+    warmup_trainer = SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=train_dataset,
+        dataset_text_field="text",
+        max_seq_length=model_config['max_length'],
+        args=warmup_args,
+        packing=True,
+    )
+
+    warmup_trainer.train()
+
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r = lora_config.get('r', 16),
+        target_modules = lora_config.get('target_modules', ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj", "embed_tokens", "lm_head"]), # Modules for Mistral/Llama
+        lora_alpha = lora_config.get('lora_alpha', 16),
+        lora_dropout = lora_config.get('lora_dropout', 0.05),
+        bias = lora_config.get('bias', "none"),
+        use_gradient_checkpointing = training_config.get('gradient_checkpointing', 'unsloth'),
+        random_state = 42,
+        use_rslora = lora_config.get('use_rslora', True),
+        loftq_config = lora_config.get('loftq_config', None),
+
+    )
+    print("  - Applied LoRA adapters (PEFT) to the model.")
+
+    
+    # # 4. Create Base Datasets (text format)
+    # print("\n" + "=" * 80)
+    # print("Creating datasets in 'text' format...")
+    # print("=" * 80)
+    
+    # dataset_args = {
+    #     "data_dir": data_config["data_dir"],
+    #     "vocab_file": data_config["vocab_filepath"],
+    #     "labels_file": data_config["labels_filepath"],
+    #     "medical_lookup_file": data_config["medical_lookup_filepath"],
+    #     "lab_lookup_file": data_config["lab_lookup_filepath"],
+    #     "region_lookup_file": data_config["region_lookup_filepath"],
+    #     "format": 'text',  # Use existing text format!
+    #     "cutoff_months": data_config.get("cutoff_months", 1),  # Default 1-month cutoff
+    #     "max_sequence_length": None  # No truncation - we'll pack sequences
+    # }
+    
+    # print("\nLoading training data...")
+    # train_base_dataset = UnifiedEHRDataset(split="train", **dataset_args)
+    # print(f"  - Loaded {len(train_base_dataset)} training patients")
+    
+    # print("\nLoading validation data...")
+    # val_base_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
+    # print(f"  - Loaded {len(val_base_dataset)} validation patients")
+    
+
+    # print("\n" + "=" * 80)
+    # print("Verifying data - First 3 patient narratives:")
+    # print("=" * 80)
+    
+    # # 5. Extract text from datasets
+    # train_text_list = extract_text(train_base_dataset, tokenizer)
+    # val_text_list = extract_text(val_base_dataset, tokenizer)
+
+    # # Verify the data
+    # verify_patient(train_text_list, tokenizer)
+
+    # train_dataset = Dataset.from_dict({"text": train_text_list})
+    # val_dataset = Dataset.from_dict({"text": val_text_list})
+
+    # V_orig = 151669
+    # allowed_ids = {}
+    # check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 
     # 6. Set Up Training Arguments
     print("\n" + "=" * 80)
