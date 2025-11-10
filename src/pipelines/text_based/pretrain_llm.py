@@ -381,39 +381,39 @@ def main(config_path: str):
     allowed_ids = {}
     check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 
-    model = FastLanguageModel.get_peft_model(model, **lora_config)
-    # Freeze everything but embeddings and then do a small warm up
-    for name, param in model.named_parameters():
-        param.requires_grad = False
-        if any(x in name for x in ["embed_tokens", "lm_head", "lora"]):
-            param.requires_grad = True
+    # model = FastLanguageModel.get_peft_model(model, **lora_config)
+    # # Freeze everything but embeddings and then do a small warm up
+    # for name, param in model.named_parameters():
+    #     param.requires_grad = False
+    #     if any(x in name for x in ["embed_tokens", "lm_head", "lora"]):
+    #         param.requires_grad = True
     
-    warmup_args = TrainingArguments(
-        output_dir=training_config['output_dir'],
-        num_train_epochs=0.3,
-        # num_train_steps=200,
-        learning_rate=5e-4,
-        per_device_train_batch_size=training_config['batch_size'],
-        logging_steps=50,
-        save_strategy="no",
-        report_to=report_to
-    )
+    # warmup_args = TrainingArguments(
+    #     output_dir=training_config['output_dir'],
+    #     num_train_epochs=0.3,
+    #     # num_train_steps=200,
+    #     learning_rate=5e-4,
+    #     per_device_train_batch_size=training_config['batch_size'],
+    #     logging_steps=50,
+    #     save_strategy="no",
+    #     report_to=report_to
+    # )
 
-    warmup_trainer = SFTTrainer(
-        model=model,
-        tokenizer=tokenizer,
-        train_dataset=train_dataset,
-        dataset_text_field="text",
-        max_seq_length=model_config['max_length'],
-        args=warmup_args,
-        packing=True,
-    )
+    # warmup_trainer = SFTTrainer(
+    #     model=model,
+    #     tokenizer=tokenizer,
+    #     train_dataset=train_dataset,
+    #     dataset_text_field="text",
+    #     max_seq_length=model_config['max_length'],
+    #     args=warmup_args,
+    #     packing=True,
+    # )
 
-    warmup_trainer.train()
+    # warmup_trainer.train()
 
-    for name, param in model.named_parameters():
-        if 'lora' in name or 'adapter' in name:
-            param.requires_grad = True
+    # for name, param in model.named_parameters():
+    #     if 'lora' in name or 'adapter' in name:
+    #         param.requires_grad = True
 
     model = FastLanguageModel.get_peft_model(
         model,
@@ -429,51 +429,6 @@ def main(config_path: str):
 
     )
     print("  - Applied LoRA adapters (PEFT) to the model.")
-
-    
-    # # 4. Create Base Datasets (text format)
-    # print("\n" + "=" * 80)
-    # print("Creating datasets in 'text' format...")
-    # print("=" * 80)
-    
-    # dataset_args = {
-    #     "data_dir": data_config["data_dir"],
-    #     "vocab_file": data_config["vocab_filepath"],
-    #     "labels_file": data_config["labels_filepath"],
-    #     "medical_lookup_file": data_config["medical_lookup_filepath"],
-    #     "lab_lookup_file": data_config["lab_lookup_filepath"],
-    #     "region_lookup_file": data_config["region_lookup_filepath"],
-    #     "format": 'text',  # Use existing text format!
-    #     "cutoff_months": data_config.get("cutoff_months", 1),  # Default 1-month cutoff
-    #     "max_sequence_length": None  # No truncation - we'll pack sequences
-    # }
-    
-    # print("\nLoading training data...")
-    # train_base_dataset = UnifiedEHRDataset(split="train", **dataset_args)
-    # print(f"  - Loaded {len(train_base_dataset)} training patients")
-    
-    # print("\nLoading validation data...")
-    # val_base_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
-    # print(f"  - Loaded {len(val_base_dataset)} validation patients")
-    
-
-    # print("\n" + "=" * 80)
-    # print("Verifying data - First 3 patient narratives:")
-    # print("=" * 80)
-    
-    # # 5. Extract text from datasets
-    # train_text_list = extract_text(train_base_dataset, tokenizer)
-    # val_text_list = extract_text(val_base_dataset, tokenizer)
-
-    # # Verify the data
-    # verify_patient(train_text_list, tokenizer)
-
-    # train_dataset = Dataset.from_dict({"text": train_text_list})
-    # val_dataset = Dataset.from_dict({"text": val_text_list})
-
-    # V_orig = 151669
-    # allowed_ids = {}
-    # check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 
     # 6. Set Up Training Arguments
     print("\n" + "=" * 80)
