@@ -85,6 +85,98 @@ def verify_patient(train_text_list, tokenizer):
     print("Creating SFT datasets...")
     print("=" * 80)
 
+def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, max_print_width: int = 100):
+    """
+    Runs causal language modeling inference on the fine-tuned model and displays
+    the raw stream and formatted event output.
+    
+    Args:
+        model: The fine-tuned LoRA model (e.g., Unsloth FastLanguageModel).
+        tokenizer: The corresponding tokenizer.
+        prompt: The input medical event sequence.
+        max_new_tokens: Maximum number of tokens to generate.
+        max_print_width: Width for text wrapping the final output.
+    """
+    
+    # 1. Setup for Inference
+    # The call to for_inference() is correct for Unsloth models
+    model.eval()
+    FastLanguageModel.for_inference(model)
+
+    print('First checking token 2')
+    token_id_2 = tokenizer.encode('2', add_special_tokens=False)
+    print(f"Token ID for '2': {token_id_2}")
+
+    # Encode the prompt and move to the correct device (assuming CUDA is available)
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+        
+    inputs = tokenizer([prompt], return_tensors="pt").to(device)
+
+    print("-" * 80)
+    print(f"PROMPT:\n{textwrap.fill(prompt, width=max_print_width)}\n")
+    print("MODEL GENERATION:")
+    print("-" * 80)
+
+    # Setup the streamer
+    text_streamer = TextIteratorStreamer(tokenizer, skip_prompt=True)
+    all_generated_chunks = []
+    
+    # 2. Setup Generation Arguments (Critical for unstable models)
+    # The key change is adding do_sample=False to force greedy decoding
+    generation_kwargs = dict(
+        inputs,
+        streamer=text_streamer,
+        max_new_tokens=max_new_tokens,
+        use_cache=True,
+        # --- CRITICAL DECODING PARAMETERS ---
+        do_sample=False, # Force greedy search (highest probability token)
+        num_beams=1,     # Equivalent to greedy search when do_sample=False
+        pad_token_id=tokenizer.eos_token_id, # Safest default for Causal LM
+        eos_token_id=tokenizer.eos_token_id, # Ensure generation stops on EOS
+        # ------------------------------------
+    )
+    
+    # 3. Start Generation Thread and Stream Raw Output
+    thread = Thread(target=model.generate, kwargs=generation_kwargs)
+    thread.start()
+
+    print("MODEL OUTPUT (RAW STREAM):")
+    for new_text in text_streamer:
+        print(new_text, end="")
+        all_generated_chunks.append(new_text)
+
+    # 4. Wait and Format Output
+    thread.join()
+
+    print("\n\n" + "=" * 80)
+    print("--- Formatted Readable Event Sequence ---")
+    print("=" * 80)
+
+    # Combine all chunks
+    full_generated_text = "".join(all_generated_chunks)
+    
+    # Get all the token IDs that were generated
+    generated_token_ids = tokenizer.encode(full_generated_text, add_special_tokens=False)
+    
+    # Decode each token individually to get the event strings (better for event tokens)
+    event_tokens = []
+    for token_id in generated_token_ids:
+        decoded_token = tokenizer.decode([token_id], skip_special_tokens=True).strip()
+        # Only include non-empty tokens
+        if decoded_token:
+            event_tokens.append(decoded_token)
+    
+    # Join with spaces and use textwrap.fill for readability
+    readable_output = " ".join(event_tokens)
+    
+    if not readable_output:
+        print("GENERATION COLLAPSED (Model predicted EOS/PAD immediately).")
+    else:
+        print(textwrap.fill(readable_output, width=max_print_width))
+    print("\n")
 
 def main(config_path: str):
     """
@@ -342,75 +434,78 @@ def main(config_path: str):
     print("Running inference test...")
     print("=" * 80)
 
-    # Set model to evaluation mode
-    model.eval()
-    
-    # Call for_inference() to prepare the model
-    FastLanguageModel.for_inference(model)
-
-    # Define a sample prompt
     prompt = '65-69GENDER FEMALEETHNICITY WHITEREGION North WestBMI: highFrailty Index score: low1dFrailty Index score: low4d-7dOphthalmological referral7d-12dFrailty Index score: low1dFrailty Index score: low2d-4dDermatitisFrailty Index score: low1d-2dDermatological referral20d-30dDermatitisContact dermatitis due to solar radiation7d-12dFrailty Index score: low20d-30dCapsulotomy of lens capsule7d-12dPsoriasis20d-30dOral administration of treatment12d-20dFrailty Index score: low7d-12dFrailty Index score: low4d-7dEnteric microscopy, culture and sensitivitiesClostridium difficile glutamate dehydrogenase immunoassay2d-4dFrailty Index score: normal7d-12dEosinophil count: normalSerum vitamin B12 level: normalAcetoacetate level: highAcute kidney injury warning stageTest request : Serum TSH level: high'
     print(f"PROMPT: {prompt}\n")
-    print("MODEL OUTPUT:")
+    run_ehr_inference(model, tokenizer, prompt)
+    # # Set model to evaluation mode
+    # model.eval()
+    
+    # # Call for_inference() to prepare the model
+    # FastLanguageModel.for_inference(model)
 
-    # Setup the streamer
-    text_streamer = TextIteratorStreamer(tokenizer, skip_prompt=True)
-    max_print_width = 100 # For text wrapping
+    # # Define a sample prompt
+    # prompt = '65-69GENDER FEMALEETHNICITY WHITEREGION North WestBMI: highFrailty Index score: low1dFrailty Index score: low4d-7dOphthalmological referral7d-12dFrailty Index score: low1dFrailty Index score: low2d-4dDermatitisFrailty Index score: low1d-2dDermatological referral20d-30dDermatitisContact dermatitis due to solar radiation7d-12dFrailty Index score: low20d-30dCapsulotomy of lens capsule7d-12dPsoriasis20d-30dOral administration of treatment12d-20dFrailty Index score: low7d-12dFrailty Index score: low4d-7dEnteric microscopy, culture and sensitivitiesClostridium difficile glutamate dehydrogenase immunoassay2d-4dFrailty Index score: normal7d-12dEosinophil count: normalSerum vitamin B12 level: normalAcetoacetate level: highAcute kidney injury warning stageTest request : Serum TSH level: high'
+    # print(f"PROMPT: {prompt}\n")
+    # print("MODEL OUTPUT:")
 
-    inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
+    # # Setup the streamer
+    # text_streamer = TextIteratorStreamer(tokenizer, skip_prompt=True)
+    # max_print_width = 100 # For text wrapping
 
-    # 0. Create a list to capture all the generated text
-    all_generated_chunks = []
-    
-    # 1. Setup generation kwargs and start the thread
-    generation_kwargs = dict(
-        inputs,
-        streamer=text_streamer,
-        max_new_tokens=256,
-        use_cache=True,
-    )
-    thread = Thread(target=model.generate, kwargs=generation_kwargs)
-    thread.start()
+    # inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
 
-    # 2. Print the LIVE (raw) output as it streams
-    # (This will be a single, long line of space-separated tokens)
-    print("MODEL OUTPUT (RAW STREAM):")
-    length = 0
-    for j, new_text in enumerate(text_streamer):
-        print(new_text, end="")
-        all_generated_chunks.append(new_text) # Capture the chunk
+    # # 0. Create a list to capture all the generated text
+    # all_generated_chunks = []
     
-    # 3. Wait for the generation thread to finish
-    thread.join()
+    # # 1. Setup generation kwargs and start the thread
+    # generation_kwargs = dict(
+    #     inputs,
+    #     streamer=text_streamer,
+    #     max_new_tokens=256,
+    #     use_cache=True,
+    # )
+    # thread = Thread(target=model.generate, kwargs=generation_kwargs)
+    # thread.start()
 
-    # 4. Now, create the FORMATTED readable output
-    print("\n\n" + "=" * 80)
-    print("--- Formatted Readable Output ---")
-    print("=" * 80)
+    # # 2. Print the LIVE (raw) output as it streams
+    # # (This will be a single, long line of space-separated tokens)
+    # print("MODEL OUTPUT (RAW STREAM):")
+    # length = 0
+    # for j, new_text in enumerate(text_streamer):
+    #     print(new_text, end="")
+    #     all_generated_chunks.append(new_text) # Capture the chunk
+    
+    # # 3. Wait for the generation thread to finish
+    # thread.join()
 
-    # Combine all the chunks into one full string
-    full_generated_text = "".join(all_generated_chunks)
+    # # 4. Now, create the FORMATTED readable output
+    # print("\n\n" + "=" * 80)
+    # print("--- Formatted Readable Output ---")
+    # print("=" * 80)
+
+    # # Combine all the chunks into one full string
+    # full_generated_text = "".join(all_generated_chunks)
     
-    full_decoded = tokenizer.decode(tokenizer.encode(full_generated_text, add_special_tokens=False))
+    # full_decoded = tokenizer.decode(tokenizer.encode(full_generated_text, add_special_tokens=False))
     
-    # For display, we'll add spaces between tokens for readability
-    # First, get all the token IDs that were generated
-    generated_token_ids = tokenizer.encode(full_generated_text, add_special_tokens=False)
+    # # For display, we'll add spaces between tokens for readability
+    # # First, get all the token IDs that were generated
+    # generated_token_ids = tokenizer.encode(full_generated_text, add_special_tokens=False)
     
-    # Decode each token individually to get the actual event strings
-    event_tokens = []
-    for token_id in generated_token_ids:
-        decoded_token = tokenizer.decode([token_id])
-        # Remove any special tokens or padding
-        if decoded_token and decoded_token not in [tokenizer.eos_token, tokenizer.pad_token]:
-            event_tokens.append(decoded_token)
+    # # Decode each token individually to get the actual event strings
+    # event_tokens = []
+    # for token_id in generated_token_ids:
+    #     decoded_token = tokenizer.decode([token_id])
+    #     # Remove any special tokens or padding
+    #     if decoded_token and decoded_token not in [tokenizer.eos_token, tokenizer.pad_token]:
+    #         event_tokens.append(decoded_token)
     
-    # Join with spaces for readability when displaying
-    readable_output = " ".join(event_tokens)
+    # # Join with spaces for readability when displaying
+    # readable_output = " ".join(event_tokens)
     
-    # Use textwrap.fill to wrap the final, readable string
-    print(textwrap.fill(readable_output, width=max_print_width))
-    print("\n")
+    # # Use textwrap.fill to wrap the final, readable string
+    # print(textwrap.fill(readable_output, width=max_print_width))
+    # print("\n")
 
 
 if __name__ == "__main__":
