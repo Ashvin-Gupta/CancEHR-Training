@@ -4,8 +4,8 @@ name: "llama_pretraining"
 
 model:
   # Model to pretrain (examples: gpt2, meta-llama/Llama-2-7b-hf, mistralai/Mistral-7B-v0.1, unsloth/llama-3-8b-bnb-4bit, unsloth/Qwen3-8B-Base-unsloth-bnb-4bit)
-  model_name: "unsloth/Qwen3-0.6B-Base-unsloth-bnb-4bit"
-  base_model_name: "Qwen/Qwen3-0.6B"
+  model_name: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
+  base_model_name: "Qwen/Qwen3-8B"
   max_length: 2048  # Context window for sequence packing
   hf_token: null 
 
@@ -22,7 +22,7 @@ lora:
   bias: "none"
 
 training:
-  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-0.6B"
+  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B"
   overwrite_output_dir: true
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
@@ -45,7 +45,7 @@ training:
   # Logging and saving
   logging_steps: 50
   eval_steps: 250
-  save_steps: 2000
+  save_steps: 1000
   save_total_limit: 3  # Keep only 1 best checkpoint
 
 data:

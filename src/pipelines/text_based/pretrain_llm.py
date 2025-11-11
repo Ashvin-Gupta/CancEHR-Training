@@ -257,7 +257,7 @@ def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, 
             event_tokens.append(decoded_token)
     
     # Join with spaces and use textwrap.fill for readability
-    readable_output = " ".join(event_tokens)
+    readable_output = ", ".join(event_tokens)
     
     if not readable_output:
         print("GENERATION COLLAPSED (Model predicted EOS/PAD immediately).")
