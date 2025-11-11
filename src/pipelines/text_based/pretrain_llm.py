@@ -195,8 +195,12 @@ def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, 
         max_new_tokens=max_new_tokens,
         use_cache=True,
         # --- CRITICAL DECODING PARAMETERS ---
-        do_sample=False, # Force greedy search (highest probability token)
-        num_beams=1,     # Equivalent to greedy search when do_sample=False
+        do_sample=True,
+        temperature=0.6,
+        top_p = 0.9,
+        top_k = 40,
+        repetition_penalty = 1.1,
+        num_beams=1,     
         pad_token_id=tokenizer.eos_token_id, # Safest default for Causal LM
         eos_token_id=tokenizer.eos_token_id, # Ensure generation stops on EOS
         # ------------------------------------
