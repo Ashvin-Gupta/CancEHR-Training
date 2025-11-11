@@ -22,12 +22,12 @@ lora:
   bias: "none"
 
 training:
-  output_dir: "/data/scratch/qc25022/upgi/experiments/llm_pretrain"
+  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-0.6B"
   overwrite_output_dir: true
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
   # Training hyperparameters
-  epochs: 1
+  epochs: 10
   batch_size: 8
   eval_batch_size: 4
   learning_rate: 1e-5
@@ -46,7 +46,7 @@ training:
   logging_steps: 50
   eval_steps: 250
   save_steps: 2000
-  save_total_limit: 1  # Keep only 1 best checkpoint
+  save_total_limit: 3  # Keep only 1 best checkpoint
 
 data:
   cutoff_months: 1  # Remove last 1 month before diagnosis for cancer patients
