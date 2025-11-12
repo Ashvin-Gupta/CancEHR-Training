@@ -39,8 +39,8 @@ training:
   gradient_checkpointing: false  # Set to true for large models to save memory
   
   # Precision
-  fp16: true  # Use FP16 for faster training (if GPU supports it)
-  bf16: false  # Use BF16 for better numerical stability (if GPU supports it - I don't think it does)
+  fp16: false  # Use FP16 for faster training (if GPU supports it)
+  bf16: true  # Use BF16 for better numerical stability (if GPU supports it - only does for NVIDA Ampere GPUs)
   
   # Logging and saving
   logging_steps: 50
