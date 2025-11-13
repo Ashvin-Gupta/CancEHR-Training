@@ -22,7 +22,7 @@ lora:
   bias: "none"
 
 training:
-  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B"
+  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-0.6B_test"
   overwrite_output_dir: true
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
