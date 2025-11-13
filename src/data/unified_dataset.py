@@ -89,43 +89,38 @@ class UnifiedEHRDataset(Dataset):
         try:
             if token_string.startswith('<time_interval_'):
                 time_part = token_string.split('_')[-1].strip('>')
-                return f"{time_part}"
+                return f"<TIME> {time_part}"
             elif token_string.startswith('AGE: '):
-                return f"{token_string}"
+                return f"<DEMOGRAPHIC> {token_string}"
             elif token_string.startswith('MEDICAL//BMI'):
-                return f"{token_string.split('//')[1]}"
+                return f"<DEMOGRAPHIC> {token_string.split('//')[1]}"
             elif token_string.startswith('MEDICAL//'):
                 code = token_string.split('//')[1].upper()
-                return self.medical_lookup.get(code, code.replace('_', ' ').title())
+                return f'<EVENT> {self.medical_lookup.get(code, code.replace('_', ' ').title())}'
             elif token_string.startswith('MEASUREMENT//'):
                 code = token_string.split('//')[1].upper()
                 description = self.medical_lookup.get(code, code.replace('_', ' ').title())
-                return f"{description}"
+                return f"<EVENT> {description}"
             elif token_string.startswith('LAB//'):
                 code = token_string.split('//')[1].upper()
-                return self.lab_lookup.get(code, code.replace('_', ' ').title())
+                return f"<EVENT> {self.lab_lookup.get(code, code.replace('_', ' ').title())}"
             # elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
             #     return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
             elif token_string.startswith(('GENDER//', 'ETHNICITY//')):
                 parts = token_string.split('//')
-                return f"{parts[0]} {parts[1]}"
+                return f"<DEMOGRAPHIC> {parts[0]} {parts[1]}"
             elif token_string.startswith('REGION//'):
                 parts = token_string.split('//')
-                return f"{parts[0]} {self.region_lookup.get(parts[1], parts[1])}"
+                return f"<DEMOGRAPHIC> {parts[0]} {self.region_lookup.get(parts[1], parts[1])}"
+            elif token_string.startswith('LIFESTYLE//'):
+                code = token_string.split('//')[1].upper()
+                return f"<DEMOGRAPHIC> Lifestyle {code}"
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                return f"Quantile {token_string[1:]}"
+                return f"<VALUE> {token_string[1:]}"
             elif token_string.startswith('low') or token_string.startswith('normal') or token_string.startswith('high') or token_string.startswith('very low') or token_string.startswith('very high') and len(token_string) <= 9:
-                return f"{token_string}"
-                # if int(token_string[1:]) <= 2:
-                #     return f"Low"
-                # elif int(token_string[1:]) <= 6:
-                #     return f"Normal"
-                # elif int(token_string[1:]) <= 9:
-                #     return f"High"
-                # else:
-                #     return f"{token_string[1:]}"
+                return f"<VALUE> {token_string}"
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
-                return ""
+                return token_string
             else:
                 return f"Unknown"
         except Exception as e:
@@ -217,7 +212,7 @@ class UnifiedEHRDataset(Dataset):
                     
                     if concept and value_bin: # Only add if both are valid
                         # Create the new combined token
-                        translated_phrases.append(f"{concept}: {value_bin}") 
+                        translated_phrases.append(f"{concept} {value_bin}") 
                     
                     i += 2 # CRITICAL: Skip both the concept and its value
                 

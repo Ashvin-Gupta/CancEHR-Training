@@ -1,6 +1,8 @@
 # src/experiments/run_llm_pretrain.py
 
 """
+So now we are doing a hybrid apprach between using the model to tokenise the natural language and adding special tokens to the tokeniser.
+TODO: We need to add in training regime 
 LLM Continued Pretraining Script
 
 This script performs continued pretraining of a language model on EHR data using:
@@ -38,7 +40,7 @@ import torch
 from huggingface_hub import login
 
 from src.data.unified_dataset import UnifiedEHRDataset
-from src.pipelines.text_based.token_adaption2 import EHRTokenTranslator
+from src.pipelines.text_based.token_adaptation import EHRTokenTranslator
 
 # Custom callback to run inference after each epoch
 from transformers import TrainerCallback
@@ -354,9 +356,7 @@ def main(config_path: str):
     
     # Perform token adaptation BEFORE applying LoRA
     model, tokenizer = translator.token_adaptation(
-        original_model_name=model_config['base_model_name'],
-        unsloth_model_name=model_config['model_name'],
-        new_concepts=unique_concepts,
+        model_name=model_config['model_name'],
         max_seq_length=model_config['max_length'],  # Pass the max_length from config
         load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
     )
@@ -400,10 +400,6 @@ def main(config_path: str):
 
     train_dataset = Dataset.from_dict({"text": train_text_list})
     val_dataset = Dataset.from_dict({"text": val_text_list})
-
-    V_orig = 151669
-    allowed_ids = {}
-    check_tokenization_integrity(train_dataset, tokenizer, V_orig, allowed_ids)
 
     model = FastLanguageModel.get_peft_model(
         model,
