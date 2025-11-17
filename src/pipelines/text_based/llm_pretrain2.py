@@ -219,9 +219,9 @@ def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, 
         # --- CRITICAL DECODING PARAMETERS ---
         do_sample=True,
         temperature=0.6,
-        top_p = 0.9,
+        top_p = 1,
         top_k = 40,
-        repetition_penalty = 1.1,
+        repetition_penalty = 1.2,
         num_beams=1,     
         pad_token_id=tokenizer.eos_token_id, # Safest default for Causal LM
         eos_token_id=tokenizer.eos_token_id, # Ensure generation stops on EOS
