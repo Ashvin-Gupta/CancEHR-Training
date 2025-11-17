@@ -4,8 +4,8 @@ name: "llama_pretraining"
 
 model:
   # Model to pretrain (examples: gpt2, meta-llama/Llama-2-7b-hf, mistralai/Mistral-7B-v0.1, unsloth/llama-3-8b-bnb-4bit, unsloth/Qwen3-8B-Base-unsloth-bnb-4bit)
-  model_name: "unsloth/Qwen3-0.6B-Base-unsloth-bnb-4bit"
-  base_model_name: "Qwen/Qwen3-0.6B"
+  model_name: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
+  base_model_name: "Qwen/Qwen3-8B"
   max_length: 2048  # Context window for sequence packing
   hf_token: null 
 
@@ -22,7 +22,7 @@ lora:
   bias: "none"
 
 training:
-  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-0.6B_test"
+  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Q`wen3-8B_test"
   overwrite_output_dir: true
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
@@ -56,3 +56,4 @@ data:
   medical_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/MedicalDictTranslation2.csv"
   lab_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/LabLookUP.csv"
   region_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/RegionLookUp.csv"
+  time_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/TimeLookUp.csv"

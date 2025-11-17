@@ -17,7 +17,7 @@ class UnifiedEHRDataset(Dataset):
     4.  Dynamically truncate patient timelines based on a specified cutoff window
         before the cancer diagnosis date.
     """
-    def __init__(self, data_dir, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file,
+    def __init__(self, data_dir, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file,
                  cutoff_months=None, max_sequence_length=512, format='tokens', split='train', tokenizer=None):
         
         self.format = format
@@ -26,7 +26,7 @@ class UnifiedEHRDataset(Dataset):
         self.tokenizer = tokenizer  # Store for pretrain format
         
         # Load all necessary mappings and lookup tables
-        self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file)
+        self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file)
         # Load the patient records from the .pkl files for the specified split
         if split == 'tuning' or split == 'held_out':
             self.patient_records = self._load_data(data_dir, split, limit=30)
@@ -34,7 +34,7 @@ class UnifiedEHRDataset(Dataset):
             # Chaning to 5 to see result and inference
             self.patient_records = self._load_data(data_dir, split)
 
-    def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file):
+    def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""
         
         vocab_df = pd.read_csv(vocab_file)
@@ -49,6 +49,9 @@ class UnifiedEHRDataset(Dataset):
 
             region_df = pd.read_csv(region_lookup_file)
             self.region_lookup = pd.Series(region_df['Description'].values, index=region_df['regionid'].astype(str).str.upper()).to_dict()
+
+            time_df = pd.read_csv(time_lookup_file)
+            self.time_lookup = pd.Series(time_df['term'].values, index=time_df['code'].astype(str).str.upper()).to_dict()
 
         labels_df = pd.read_csv(labels_file)
         labels_df['string_label'] = labels_df.apply(lambda row: 'Control' if row['is_case'] == 0 else row['site'], axis=1)
@@ -89,7 +92,7 @@ class UnifiedEHRDataset(Dataset):
         try:
             if token_string.startswith('<time_interval_'):
                 time_part = token_string.split('_')[-1].strip('>')
-                return f"<TIME> {time_part} "
+                return f"<TIME> {self.time_lookup.get(time_part, time_part)} "
             elif token_string.startswith('AGE: '):
                 return f"<DEMOGRAPHIC> {token_string} "
             elif token_string.startswith('MEDICAL//BMI'):

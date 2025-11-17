@@ -273,6 +273,7 @@ def main(config_path: str):
         "medical_lookup_file": data_config["medical_lookup_filepath"],
         "lab_lookup_file": data_config["lab_lookup_filepath"],
         "region_lookup_file": data_config["region_lookup_filepath"],
+        "time_lookup_file": data_config["time_lookup_filepath"],
         "format": 'text',  # Use existing text format!
         "cutoff_months": data_config.get("cutoff_months", 1),  # Default 1-month cutoff
         "max_sequence_length": None  # No truncation - we'll pack sequences
