@@ -22,7 +22,7 @@ lora:
   bias: "none"
 
 training:
-  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Q`wen3-8B_test"
+  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test"
   overwrite_output_dir: true
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
@@ -50,8 +50,8 @@ training:
 
 data:
   cutoff_months: 1  # Remove last 1 month before diagnosis for cancer patients
-  data_dir: "/data/scratch/qc25022/gallbladder/tokenised_data_word_level/cprd_upgi/"
-  vocab_filepath: "/data/scratch/qc25022/gallbladder/tokenised_data_word_level/cprd_upgi/vocab.csv"
+  data_dir: "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi/"
+  vocab_filepath: "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi/vocab.csv"
   labels_filepath: "/data/scratch/qc25022/upgi/master_subject_labels.csv"
   medical_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/MedicalDictTranslation2.csv"
   lab_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/LabLookUP.csv"
