@@ -40,7 +40,7 @@ import torch
 from huggingface_hub import login
 
 from src.data.unified_dataset import UnifiedEHRDataset
-from src.pipelines.text_based.token_adaptation import EHRTokenTranslator
+from src.pipelines.text_based.token_adaption2 import EHRTokenTranslator
 
 # Custom callback to run inference after each epoch
 from transformers import TrainerCallback
@@ -351,11 +351,7 @@ def main(config_path: str):
         print(f"  - CUDA not available, using CPU")
     
     translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"], data_config["region_lookup_filepath"])
-    unique_concepts = translator.extract_translated_concepts(data_config["vocab_filepath"])
-    # print(f"Unique concepts: {unique_concepts}")
-    
-    # Perform token adaptation BEFORE applying LoRA
-    model, tokenizer = translator.token_adaptation(
+    model, tokenizer = translator.token_adaption(
         model_name=model_config['model_name'],
         max_seq_length=model_config['max_length'],  # Pass the max_length from config
         load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
