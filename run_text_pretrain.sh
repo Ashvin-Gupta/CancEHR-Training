@@ -1,12 +1,11 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 12
+#$ -pe smp 8
 #$ -l h_rt=1:0:0
-#$ -l h_vmem=7.5G
+#$ -l h_vmem=11G
 #$ -l gpu=1
 #$ -l gpu_type=ampere
 #$ -j n
-#$ -l cluster=andrena
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_New/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_New/loge/
 
