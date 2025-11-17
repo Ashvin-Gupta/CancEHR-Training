@@ -59,8 +59,7 @@ class InferenceCallback(TrainerCallback):
         print("\n")
 
 # Define the inference prompt
-inference_prompt = '<start><DEMOGRAPHIC> AGE: 65-69<DEMOGRAPHIC> GENDER FEMALE<DEMOGRAPHIC> ETHNICITY WHITE<DEMOGRAPHIC> REGION North West<DEMOGRAPHIC> BMI <VALUE> high<EVENT> Frailty Index score <VALUE> low<TIME> 1d<EVENT> Frailty Index score <VALUE> low<TIME> 4d-7d<EVENT> Ophthalmological referral<TIME> 7d-12d<EVENT> Frailty Index score <VALUE> low<TIME> 1d<EVENT> Frailty Index score <VALUE> low<TIME> 2d-4d<EVENT> Dermatitis<EVENT> Frailty Index score <VALUE> low<TIME> 1d-2d<EVENT> Dermatological referral<TIME> 20d-30d<EVENT> Contact dermatitis due to solar radiation<EVENT> Dermatitis<TIME> 7d-12d<EVENT> Frailty Index score <VALUE> low<TIME> 20d-30d<EVENT> Capsulotomy of lens capsule<TIME> 7d-12d<EVENT> Psoriasis<TIME> 20d-30d<EVENT> Oral administration of treatment<TIME> 12d-20d<EVENT> Frailty Index score <VALUE> low<TIME> 7d-12d<EVENT> Frailty Index score <VALUE> low<TIME> 4d-7d<EVENT> Enteric microscopy, culture and sensitivities<EVENT>'
-
+inference_prompt = '<start> <DEMOGRAPHIC> AGE: 70-74 <DEMOGRAPHIC> GENDER FEMALE <DEMOGRAPHIC> ETHNICITY WHITE <DEMOGRAPHIC> REGION South West <EVENT> Myocardial Infarction <TIME> 4mt-6mt <EVENT> Chronic Kidney Disease <TIME> 4d-7d <unknown> <TIME> 24mt-60mt <EVENT> Hypertension <EVENT> Transient Ischaemic Attack <EVENT> Cholesterolaemia <TIME> 8mt-10mt <EVENT> Death of husband <TIME> 24mt-60mt <EVENT> Liver abscess - excluding amoebic liver abscess <EVENT> Gallbladder Disease <TIME> 2d-4d <EVENT> Hernia Diaphragm <TIME> 2mt-4mt <EVENT> Clouded consciousness <TIME> 2mt-4mt <EVENT> Noninfectious enteritis <TIME> 12d-20d <EVENT> Syncope and collapse <EVENT>'
 
 
 def extract_text(base_dataset, tokenizer):
@@ -125,10 +124,6 @@ def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, 
     model.eval()
     FastLanguageModel.for_inference(model)
 
-    print('First checking token 2')
-    token_id_2 = tokenizer.encode('2', add_special_tokens=False)
-    print(f"Token ID for '2': {token_id_2}")
-
     # Encode the prompt and move to the correct device (assuming CUDA is available)
     if torch.cuda.is_available():
         device = "cuda"
@@ -155,9 +150,9 @@ def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, 
         use_cache=True,
         # --- CRITICAL DECODING PARAMETERS ---
         do_sample=True,
-        temperature=0.6,
-        top_p = 1,
-        top_k = 40,
+        temperature=0.2,
+        top_p = 0.95,
+        top_k = 30,
         repetition_penalty = 1.2,
         num_beams=1,     
         pad_token_id=tokenizer.eos_token_id, # Safest default for Causal LM
@@ -174,34 +169,6 @@ def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, 
         print(new_text, end="")
         all_generated_chunks.append(new_text)
 
-    # 4. Wait and Format Output
-    thread.join()
-
-    print("\n\n" + "=" * 80)
-    print("--- Formatted Readable Event Sequence ---")
-    print("=" * 80)
-
-    # Combine all chunks
-    full_generated_text = "".join(all_generated_chunks)
-    
-    # Get all the token IDs that were generated
-    generated_token_ids = tokenizer.encode(full_generated_text, add_special_tokens=False)
-    
-    # Decode each token individually to get the event strings (better for event tokens)
-    event_tokens = []
-    for token_id in generated_token_ids:
-        decoded_token = tokenizer.decode([token_id], skip_special_tokens=True).strip()
-        # Only include non-empty tokens
-        if decoded_token:
-            event_tokens.append(decoded_token)
-    
-    # Join with spaces and use textwrap.fill for readability
-    readable_output = ", ".join(event_tokens)
-    
-    if not readable_output:
-        print("GENERATION COLLAPSED (Model predicted EOS/PAD immediately).")
-    else:
-        print(textwrap.fill(readable_output, width=max_print_width))
     print("\n")
 
 def main(config_path: str):

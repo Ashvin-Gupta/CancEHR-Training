@@ -24,7 +24,7 @@ from src.training.utils import build_warmup_cosine_scheduler
 from src.pipelines.token_based.models.transformer_decoder import TransformerDecoder
 from src.pipelines.token_based.models.lstm import LSTM
 from src.pipelines.token_based.models.gpt2 import GPT2
-
+from src.pipelines.token_based.models.mamba import MambaDecoder
 
 def create_logger(experiment_dir: str, experiment_name: str) -> logging.Logger:
     """
@@ -76,6 +76,8 @@ def load_model(model_config: dict) -> torch.nn.Module:
         model = TransformerDecoder(model_config)
     elif model_type == "gpt2":
         model = GPT2(model_config)
+    elif model_type == "mamba":
+        model = MambaDecoder(model_config)
     else:
         raise ValueError(f"Model type {model_type} not supported in token-based pipeline")
 
