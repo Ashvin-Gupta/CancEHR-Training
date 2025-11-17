@@ -351,7 +351,7 @@ def main(config_path: str):
         print(f"  - CUDA not available, using CPU")
     
     translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"], data_config["region_lookup_filepath"])
-    model, tokenizer = translator.token_adaption(
+    model, tokenizer = translator.token_adaptation(
         model_name=model_config['model_name'],
         max_seq_length=model_config['max_length'],  # Pass the max_length from config
         load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
