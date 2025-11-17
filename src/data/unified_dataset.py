@@ -102,6 +102,9 @@ class UnifiedEHRDataset(Dataset):
                 code = token_string.split('//')[1].upper()
                 description = self.medical_lookup.get(code, code.replace('_', ' ').title())
                 return f"<EVENT> {description}"
+            elif token_string.startswith('LAB//'):
+                code = token_string.split('//')[1].upper()
+                return f"<EVENT> {self.lab_lookup.get(code, code.replace('_', ' ').title())}"
             # elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
             #     return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
             elif token_string.startswith(('GENDER//', 'ETHNICITY//')):
