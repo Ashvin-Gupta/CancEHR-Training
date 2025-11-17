@@ -89,38 +89,38 @@ class UnifiedEHRDataset(Dataset):
         try:
             if token_string.startswith('<time_interval_'):
                 time_part = token_string.split('_')[-1].strip('>')
-                return f"<TIME> {time_part}"
+                return f"<TIME> {time_part} "
             elif token_string.startswith('AGE: '):
-                return f"<DEMOGRAPHIC> {token_string}"
+                return f"<DEMOGRAPHIC> {token_string} "
             elif token_string.startswith('MEDICAL//BMI'):
-                return f"<DEMOGRAPHIC> {token_string.split('//')[1]}"
+                return f"<DEMOGRAPHIC> {token_string.split('//')[1]} "
             elif token_string.startswith('MEDICAL//'):
                 code = token_string.split('//')[1].upper()
-                return f"<EVENT> {self.medical_lookup.get(code, code.replace('_', ' ').title())}"
+                return f"<EVENT> {self.medical_lookup.get(code, code.replace('_', ' ').title())} "
             elif token_string.startswith('MEASUREMENT//'):
                 code = token_string.split('//')[1].upper()
                 description = self.medical_lookup.get(code, code.replace('_', ' ').title())
-                return f"<EVENT> {description}"
+                return f"<EVENT> {description} "
             elif token_string.startswith('LAB//'):
                 code = token_string.split('//')[1].upper()
-                return f"<EVENT> {self.lab_lookup.get(code, code.replace('_', ' ').title())}"
+                return f"<EVENT> {self.lab_lookup.get(code, code.replace('_', ' ').title())} "
             # elif token_string.startswith(('BMI//', 'HEIGHT//', 'WEIGHT//')):
             #     return f"{token_string.split('//')[0]}: {token_string.split('//')[1]}"
             elif token_string.startswith(('GENDER//', 'ETHNICITY//')):
                 parts = token_string.split('//')
-                return f"<DEMOGRAPHIC> {parts[0]} {parts[1]}"
+                return f"<DEMOGRAPHIC> {parts[0]} {parts[1]} "
             elif token_string.startswith('REGION//'):
                 parts = token_string.split('//')
-                return f"<DEMOGRAPHIC> {parts[0]} {self.region_lookup.get(parts[1], parts[1])}"
+                return f"<DEMOGRAPHIC> {parts[0]} {self.region_lookup.get(parts[1], parts[1])} "
             elif token_string.startswith('LIFESTYLE//'):
                 code = token_string.split('//')[1].upper()
-                return f"<DEMOGRAPHIC> Lifestyle {code}"
+                return f"<DEMOGRAPHIC> Lifestyle {code} "
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
-                return f"<VALUE> {token_string[1:]}"
+                return f"<VALUE> {token_string[1:]} "
             elif token_string.startswith('low') or token_string.startswith('normal') or token_string.startswith('high') or token_string.startswith('very low') or token_string.startswith('very high') and len(token_string) <= 9:
-                return f"<VALUE> {token_string}"
+                return f"<VALUE> {token_string} "
             elif token_string in ['<start>', '<end>', '<unknown>', 'MEDS_BIRTH']:
-                return token_string
+                return token_string + " "
             else:
                 return f"Unknown"
         except Exception as e:

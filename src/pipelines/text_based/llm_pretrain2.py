@@ -40,7 +40,7 @@ import torch
 from huggingface_hub import login
 
 from src.data.unified_dataset import UnifiedEHRDataset
-from src.pipelines.text_based.token_adaption2 import EHRTokenTranslator
+from src.pipelines.text_based.token_adaption2 import EHRTokenExtensionStaticTokenizer
 
 # Custom callback to run inference after each epoch
 from transformers import TrainerCallback
@@ -59,71 +59,8 @@ class InferenceCallback(TrainerCallback):
         print("\n")
 
 # Define the inference prompt
-inference_prompt = '65-69GENDER FEMALEETHNICITY WHITEREGION North WestBMI: highFrailty Index score: low1dFrailty Index score: low4d-7dOphthalmological referral7d-12dFrailty Index score: low1dFrailty Index score: low2d-4dDermatitisFrailty Index score: low1d-2dDermatological referral20d-30dDermatitisContact dermatitis due to solar radiation7d-12dFrailty Index score: low20d-30dCapsulotomy of lens capsule7d-12dPsoriasis20d-30dOral administration of treatment12d-20dFrailty Index score: low7d-12dFrailty Index score: low4d-7dEnteric microscopy, culture and sensitivitiesClostridium difficile glutamate dehydrogenase immunoassay2d-4dFrailty Index score: normal7d-12dEosinophil count: normalSerum vitamin B12 level: normalAcetoacetate level: highAcute kidney injury warning stageTest request : Serum TSH level: high'
+inference_prompt = '<start><DEMOGRAPHIC> AGE: 65-69<DEMOGRAPHIC> GENDER FEMALE<DEMOGRAPHIC> ETHNICITY WHITE<DEMOGRAPHIC> REGION North West<DEMOGRAPHIC> BMI <VALUE> high<EVENT> Frailty Index score <VALUE> low<TIME> 1d<EVENT> Frailty Index score <VALUE> low<TIME> 4d-7d<EVENT> Ophthalmological referral<TIME> 7d-12d<EVENT> Frailty Index score <VALUE> low<TIME> 1d<EVENT> Frailty Index score <VALUE> low<TIME> 2d-4d<EVENT> Dermatitis<EVENT> Frailty Index score <VALUE> low<TIME> 1d-2d<EVENT> Dermatological referral<TIME> 20d-30d<EVENT> Contact dermatitis due to solar radiation<EVENT> Dermatitis<TIME> 7d-12d<EVENT> Frailty Index score <VALUE> low<TIME> 20d-30d<EVENT> Capsulotomy of lens capsule<TIME> 7d-12d<EVENT> Psoriasis<TIME> 20d-30d<EVENT> Oral administration of treatment<TIME> 12d-20d<EVENT> Frailty Index score <VALUE> low<TIME> 7d-12d<EVENT> Frailty Index score <VALUE> low<TIME> 4d-7d<EVENT> Enteric microscopy, culture and sensitivities<EVENT>'
 
-
-def check_tokenization_integrity(dataset, tokenizer, original_vocab_size: int, allowed_base_tokens: set):
-    """
-    Checks if any unexpected base model tokens (IDs < original_vocab_size) 
-    are present in the tokenized training data.
-
-    Args:
-        dataset: The Hugging Face Dataset or a list of raw text narratives.
-        tokenizer: The tokenizer object (with added tokens).
-        original_vocab_size: The token ID that marks the start of new medical tokens.
-        allowed_base_tokens: A set of token IDs for "normal", "high", "low", etc., 
-                             that you *expect* to be in the base vocabulary.
-    """
-    unexpected_tokens_found = Counter()
-    total_new_tokens = 0
-    total_patients_checked = 0
-    
-    print(f"\n--- Running Tokenization Integrity Check ---")
-    print(f"Original Vocab Size (Boundary): {original_vocab_size}")
-
-    for i, item in enumerate(dataset):
-        # Assuming item is the raw text string from your dataset
-        if isinstance(item, dict) and 'text' in item:
-            text = item['text']
-        elif isinstance(item, str):
-            text = item
-        else:
-            continue
-            
-        token_ids = tokenizer.encode(text, add_special_tokens=False)
-        total_patients_checked += 1
-        
-        # 1. Check for tokens below the threshold
-        for token_id in token_ids:
-            if token_id >= original_vocab_size:
-                total_new_tokens += 1
-                continue
-            
-            # Token ID is in the original base vocabulary range
-            if token_id not in allowed_base_tokens:
-                # We found an UNEXPECTED token from the original model's vocabulary
-                decoded_token = tokenizer.decode([token_id])
-                unexpected_tokens_found[f"ID {token_id}: '{decoded_token}'"] += 1
-
-        if total_patients_checked % 1000 == 0 and total_patients_checked > 0:
-            print(f"  - Checked {total_patients_checked} patients...")
-            
-    # --- Report Results ---
-    print("-" * 80)
-    print(f"CHECK COMPLETE. Total Patients Checked: {total_patients_checked}")
-    print(f"Total tokens from new vocabulary (ID >= {original_vocab_size}): {total_new_tokens}")
-    
-    if unexpected_tokens_found:
-        print("\n🚨 CRITICAL ERROR: Found UNEXPECTED BASE MODEL TOKENS in Training Data:")
-        for token_str, count in unexpected_tokens_found.most_common(30):
-            print(f"  - {token_str}: Found {count} times.")
-        
-        print("\nThese tokens are likely causing the model collapse (e.g., '2', 'word count').")
-        print("ACTION: You must sanitize your data to ensure these base tokens are replaced by a single, new medical event token, or ensure the tokenizer is explicitly told to tokenize them as expected.")
-        return False
-    else:
-        print("\n✅ Tokenization Check Passed: No unexpected base model tokens found.")
-        return True
 
 
 def extract_text(base_dataset, tokenizer):
@@ -143,8 +80,8 @@ def extract_text(base_dataset, tokenizer):
         return text_list
 
 def verify_patient(train_text_list, tokenizer):
-    print("\nVerifying data - First 3 patient narratives:")
-    for i in range(min(3, len(train_text_list))):
+    print("\nVerifying data - First 1 patient narratives:")
+    for i in range(min(1, len(train_text_list))):
         print(f"\n--- PATIENT {i} ---")
         # Print the first 1000 chars
         print(f"{train_text_list[i][:1000]}...")
@@ -350,11 +287,11 @@ def main(config_path: str):
         device = "cpu"
         print(f"  - CUDA not available, using CPU")
     
-    translator = EHRTokenTranslator(data_config["medical_lookup_filepath"], data_config["lab_lookup_filepath"], data_config["region_lookup_filepath"])
-    model, tokenizer = translator.token_adaptation(
+    translator = EHRTokenExtensionStaticTokenizer()
+    model, tokenizer = translator.extend_tokenizer(
         model_name=model_config['model_name'],
         max_seq_length=model_config['max_length'],  # Pass the max_length from config
-        load_in_4bit=training_config.get('load_in_4bit', True)  # Pass load_in_4bit from config
+        load_in_4bit=training_config.get('load_in_4bit', True)
     )
 
     # 4. Create Base Datasets (text format)

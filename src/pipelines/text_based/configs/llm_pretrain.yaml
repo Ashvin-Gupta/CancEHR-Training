@@ -44,7 +44,7 @@ training:
   
   # Logging and saving
   logging_steps: 50
-  eval_steps: 250
+  eval_steps: 150
   save_steps: 1000
   save_total_limit: 3  # Keep only 1 best checkpoint
 
