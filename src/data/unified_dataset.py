@@ -96,7 +96,6 @@ class UnifiedEHRDataset(Dataset):
                 return f"<DEMOGRAPHIC> {token_string.split('//')[1]}"
             elif token_string.startswith('MEDICAL//'):
                 code = token_string.split('//')[1].upper()
-                print(f"CODE: {code}")
                 return f"<EVENT> {self.medical_lookup.get(code, code.replace('_', ' ').title())}"
             elif token_string.startswith('MEASUREMENT//'):
                 code = token_string.split('//')[1].upper()
