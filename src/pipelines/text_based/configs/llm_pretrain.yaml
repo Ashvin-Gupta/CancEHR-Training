@@ -11,7 +11,7 @@ model:
 
 wandb:
   enabled: true
-  project: "cpt-Qwen"
+  project: "cpt-Qwen-17/11/25"
   # run_name: null  # Will be auto-generated from config values during training
 
 lora:
