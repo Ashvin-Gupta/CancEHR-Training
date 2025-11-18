@@ -17,9 +17,11 @@ from .selective_scan import selective_scan_wrapper, mamba_inner_wrapper, HAS_SEL
 try:
     from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
     HAS_CAUSAL_CONV1D = True
+    print("Successfully imported causal_conv1d optimizations")
 except ImportError:
     causal_conv1d_fn, causal_conv1d_update = None, None
     HAS_CAUSAL_CONV1D = False
+    print("Failed to import causal_conv1d - using fallback implementation")
 
 class RMSNorm(nn.Module):
     """Root-mean-square normalization matching the reference Mamba implementation."""
