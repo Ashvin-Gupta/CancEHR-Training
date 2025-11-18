@@ -18,10 +18,14 @@ try:
     from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
     HAS_CAUSAL_CONV1D = True
     print("Successfully imported causal_conv1d optimizations")
-except ImportError:
+except Exception as e:
+    print(f"Failed to import causal_conv1d. Error details: {e}")
+    # Check if it's a version mismatch
+    import torch
+    print(f"PyTorch version: {torch.__version__}")
+    print(f"PyTorch CUDA version: {torch.version.cuda}")
     causal_conv1d_fn, causal_conv1d_update = None, None
     HAS_CAUSAL_CONV1D = False
-    print("Failed to import causal_conv1d - using fallback implementation")
 
 class RMSNorm(nn.Module):
     """Root-mean-square normalization matching the reference Mamba implementation."""
