@@ -187,27 +187,27 @@ def run_classification_training(
         report_to="wandb" if wandb_config.get('enabled', False) else "none",
         
         # Training hyperparameters
-        num_train_epochs=training_config.get('epochs', 10),
-        per_device_train_batch_size=training_config.get('batch_size', 8),
-        per_device_eval_batch_size=training_config.get('eval_batch_size', 8),
-        learning_rate=training_config.get('learning_rate', 1e-3),
-        weight_decay=training_config.get('weight_decay', 0.01),
-        warmup_steps=training_config.get('warmup_steps', 100),
+        num_train_epochs=int(training_config.get('epochs', 10)),
+        per_device_train_batch_size=int(training_config.get('batch_size', 8)),
+        per_device_eval_batch_size=int(training_config.get('eval_batch_size', 8)),
+        learning_rate=float(training_config.get('learning_rate', 1e-3)),
+        weight_decay=float(training_config.get('weight_decay', 0.01)),
+        warmup_steps=int(training_config.get('warmup_steps', 100)),
         
         # Gradient settings
-        gradient_accumulation_steps=training_config.get('gradient_accumulation_steps', 1),
+        gradient_accumulation_steps=int(training_config.get('gradient_accumulation_steps', 1)),
         
         # Precision
-        fp16=training_config.get('fp16', False),
-        bf16=training_config.get('bf16', True),
+        fp16=bool(training_config.get('fp16', False)),
+        bf16=bool(training_config.get('bf16', True)),
         
         # Logging and evaluation
-        logging_steps=training_config.get('logging_steps', 10),
+        logging_steps=int(training_config.get('logging_steps', 10)),
         eval_strategy="steps",
-        eval_steps=training_config.get('eval_steps', 100),
+        eval_steps=int(training_config.get('eval_steps', 100)),
         save_strategy="steps",
-        save_steps=training_config.get('save_steps', 500),
-        save_total_limit=training_config.get('save_total_limit', 2),
+        save_steps=int(training_config.get('save_steps', 500)),
+        save_total_limit=int(training_config.get('save_total_limit', 2)),
         
         # Best model tracking
         load_best_model_at_end=True,
