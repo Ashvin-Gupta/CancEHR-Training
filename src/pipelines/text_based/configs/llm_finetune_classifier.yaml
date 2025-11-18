@@ -5,10 +5,11 @@ name: "llm_classification_finetuning"
 model:
   # Path to the pretrained checkpoint from continued pretraining
   # This should contain the LoRA adapters and extended tokenizer
+  unsloth_model: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
   pretrained_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test/checkpoint-3000"
   
   # Model architecture settings
-  hidden_size: 896  # Qwen3-8B hidden dimension (check your model config if different)
+  hidden_size: 4096  # Qwen3-8B hidden dimension (check your model config if different)
   num_labels: 2  # Binary classification: 0 = Control, 1 = Cancer
   
   # Freezing strategy
