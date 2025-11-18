@@ -17,6 +17,9 @@ export WANDB_API_KEY="3256683a0a9a004cf52e04107a3071099a53038e"
 
 # --- Environment Setup ---
 module load cuda/12.4.0-gcc-12.2.0
+export CUDA_HOME=$CUDA_PATH
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 source /data/home/qc25022/CancEHR-Training/ssm/bin/activate
 
 # --- Execute from Project Root ---
