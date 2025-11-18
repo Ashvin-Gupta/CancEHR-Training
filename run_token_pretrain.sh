@@ -16,7 +16,7 @@ BASE_DIR="/data/home/qc25022/CancEHR-Training"
 export WANDB_API_KEY="3256683a0a9a004cf52e04107a3071099a53038e"
 
 # --- Environment Setup ---
-module load intel intel-mpi python
+module load cuda/12.4.0-gcc-12.2.0
 source /data/home/qc25022/CancEHR-Training/ssm/bin/activate
 
 # --- Execute from Project Root ---
