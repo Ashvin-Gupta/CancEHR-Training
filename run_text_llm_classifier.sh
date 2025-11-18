@@ -25,10 +25,10 @@ cd "${BASE_DIR}"
 echo "Starting experiment from directory: $(pwd)"
 
 # Run the fine-tuning script
-#python -m src.pipelines.text_based.finetune_llm_classifier \
-#    --config_filepath "$CONFIG_PATH"
-python -m src.pipelines.text_based.test_classifier_setup \
-    --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
+python -m src.pipelines.text_based.finetune_llm_classifier \
+   --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
+# python -m src.pipelines.text_based.test_classifier_setup --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
+#     --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
 echo "Classification fine-tuning complete!"
 
 
