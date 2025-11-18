@@ -128,6 +128,14 @@ def compute_metrics(eval_pred):
     """
     predictions, labels = eval_pred
     
+    # Handle case where predictions is a tuple/dict (model returns multiple outputs)
+    # Extract just the logits (first element if tuple, or 'logits' key if dict)
+    if isinstance(predictions, tuple):
+        predictions = predictions[0]  # Usually logits are first
+    elif isinstance(predictions, dict):
+        predictions = predictions['logits']
+    
+    # Now predictions should be shape (batch_size, num_labels)
     # Get predicted class (argmax of logits)
     preds = np.argmax(predictions, axis=1)
     
