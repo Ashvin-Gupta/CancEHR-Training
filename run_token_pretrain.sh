@@ -16,7 +16,7 @@ export WANDB_API_KEY="3256683a0a9a004cf52e04107a3071099a53038e"
 
 # --- Environment Setup ---
 module load intel intel-mpi python
-source /data/home/qc25022/CancEHR-Training/venv/bin/activate
+source /data/home/qc25022/CancEHR-Training/ssm/bin/activate
 
 # --- Execute from Project Root ---
 # Change to the base directory before running the python command
@@ -25,8 +25,8 @@ cd "${BASE_DIR}"
 echo "Starting experiment from directory: $(pwd)"
 
 # python -m src.pipelines.token_based.pretrain --config src/pipelines/token_based/configs/cprd_decoder_lstm_test.yaml --experiment_name lstm_test
-# python -m src.pipelines.token_based.pretrain --config src/pipelines/token_based/configs/mamba_base.yaml --experiment_name mamba_base
-python -m src.pipelines.token_based.models.mamba
+python -m src.pipelines.token_based.pretrain --config src/pipelines/token_based/configs/mamba_base.yaml --experiment_name mamba_base
+# python -m src.pipelines.token_based.models.mamba
 
 echo "Pipeline finished."
 deactivate
