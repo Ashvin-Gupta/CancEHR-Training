@@ -131,9 +131,6 @@ def main(config_path: str):
     train_dataset = UnifiedEHRDataset(split="train", **dataset_args)
     val_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
     
-    # Limit to 3 files for validation to speed up testing
-    val_dataset.file_list = val_dataset.file_list[:3]
-    
     print(f"  - Train dataset: {len(train_dataset)} patients")
     print(f"  - Validation dataset: {len(val_dataset)} patients")
     
