@@ -215,13 +215,8 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         if self.mode == "train":
             # Extract raw tokens/timestamps
             raw_token_ids = x["ehr"]["token_ids"]
-            raw_timestamps = x["ehr"]["timestamps"]
-            
-            # Detect dtype for timestamps to prevent concatenation errors (Float vs Long)
-            ts_dtype = raw_timestamps.dtype
-            print(f"Timestamp dtype: {ts_dtype}")
-            print(f"Raw timestamps: {raw_timestamps.dtype}")
-            print(f"Raw token ids: {raw_token_ids.dtype}")
+            # FIX 1: Force timestamps to Float32 immediately to prevent type mismatch errors
+            raw_timestamps = x["ehr"]["timestamps"].to(dtype=torch.float32)
             
             # Separate static vs non-static if needed
             if self.insert_static_demographic_tokens:
@@ -246,25 +241,26 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                 # Construct Full Source (Static + Dynamic)
                 full_source_tokens = torch.cat([static_tokens, non_static_tokens])
                 
-                # Construct Full Timestamps (Handling dtype mismatch)
-                # Create zeros matching the TIMESTAMP DTYPE, not the token dtype
-                static_ts_zeros = torch.zeros(len(static_tokens), dtype=ts_dtype)
+                # Construct Full Timestamps
+                # FIX 2: Use float32 zeros for padding to match raw_timestamps
+                static_ts_zeros = torch.zeros(len(static_tokens), dtype=torch.float32)
                 full_source_timestamps = torch.cat([static_ts_zeros, non_static_timestamps])
                 
                 valid_len = len(full_source_tokens) - 1 
                 
-                # Initialize buffers
+                # Initialize buffers with STRICT types
                 input_token_ids = torch.zeros(self.sequence_length, dtype=torch.long)
                 target_token_ids = torch.full((self.sequence_length,), -100, dtype=torch.long)
                 
-                # Initialize timestamp buffers with CORRECT DTYPE
-                input_timestamps = torch.zeros(self.sequence_length, dtype=ts_dtype)
-                target_timestamps = torch.zeros(self.sequence_length, dtype=ts_dtype)
+                # FIX 3: Timestamps buffer must be Float32
+                input_timestamps = torch.zeros(self.sequence_length, dtype=torch.float32)
+                target_timestamps = torch.zeros(self.sequence_length, dtype=torch.float32)
                 
                 padding_mask = torch.zeros(self.sequence_length, dtype=torch.bool)
 
                 # Copy valid data
                 input_token_ids[:valid_len] = full_source_tokens[:-1]
+                # Note: This assignment works because input_timestamps is Float and full_source is Float
                 input_timestamps[:valid_len] = full_source_timestamps[:-1]
                 
                 target_token_ids[:valid_len] = full_source_tokens[1:]
@@ -289,8 +285,8 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                 input_token_ids = torch.cat([static_tokens, input_dynamic])
                 target_token_ids = torch.cat([static_tokens, target_dynamic]) 
                 
-                # Combine timestamps (using matching zeros)
-                static_ts_zeros = torch.zeros(len(static_tokens), dtype=ts_dtype)
+                # Combine timestamps
+                static_ts_zeros = torch.zeros(len(static_tokens), dtype=torch.float32)
                 input_timestamps = torch.cat([static_ts_zeros, ts_dynamic])
                 target_timestamps = torch.cat([static_ts_zeros, ts_target_dynamic])
                 
@@ -298,16 +294,24 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                 padding_mask = torch.ones(self.sequence_length, dtype=torch.bool)
 
         elif self.mode == "eval":
-            # Evaluation dataset is already chunked perfectly
+            # Evaluation dataset
             input_token_ids = x["ehr"]["token_ids"][:-1]
-            input_timestamps = x["ehr"]["timestamps"][:-1]
+            # FIX 4: Enforce float32 for eval timestamps too
+            input_timestamps = x["ehr"]["timestamps"][:-1].to(dtype=torch.float32)
             target_token_ids = x["ehr"]["token_ids"][1:]
-            target_timestamps = x["ehr"]["timestamps"][1:]
+            target_timestamps = x["ehr"]["timestamps"][1:].to(dtype=torch.float32)
             
             padding_mask = torch.ones(len(input_token_ids), dtype=torch.bool)
 
+        # FIX 5: Enforce subject_id as Long (Int64)
+        subject_id_val = x["subject_id"]
+        if isinstance(subject_id_val, torch.Tensor):
+            subject_id_val = subject_id_val.to(dtype=torch.long)
+        else:
+            subject_id_val = torch.tensor(subject_id_val, dtype=torch.long)
+
         datapoint = {
-            "subject_id": x["subject_id"],
+            "subject_id": subject_id_val,
             "ehr": {
                 "input_token_ids": input_token_ids,
                 "input_timestamps": input_timestamps,
