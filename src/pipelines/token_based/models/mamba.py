@@ -99,8 +99,8 @@ class MambaDecoder(BaseNightingaleModel):
 
     def required_input_keys(self) -> set[str]:
         """Returns the required input keys for this model."""
-        return {"ehr.input_token_ids"}
-        # return {"ehr.input_token_ids", "ehr.input_padding_mask"}
+        # return {"ehr.input_token_ids"}
+        return {"ehr.input_token_ids", "ehr.input_padding_mask"}
 
     def _init_weights(self) -> None:
         """
