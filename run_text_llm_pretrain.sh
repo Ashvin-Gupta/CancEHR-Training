@@ -32,3 +32,4 @@ python -m src.pipelines.text_based.llm_pretrain2 --config_filepath src/pipelines
 
 echo "Pipeline finished."
 deactivate
+
