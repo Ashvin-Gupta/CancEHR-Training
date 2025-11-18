@@ -211,7 +211,7 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx: int) -> dict:
         # # TODO: Implement a Collator class so padding / truncation is done dynamically in the collate function
-        # x = self.data[idx]
+        x = self.data[idx]
 
         # if self.mode == "train":
         #     # If this is a training dataset then we randomly sample a start index and construct the input and target token sequences.
