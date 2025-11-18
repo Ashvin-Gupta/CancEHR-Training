@@ -219,6 +219,9 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
             
             # Detect dtype for timestamps to prevent concatenation errors (Float vs Long)
             ts_dtype = raw_timestamps.dtype
+            print(f"Timestamp dtype: {ts_dtype}")
+            print(f"Raw timestamps: {raw_timestamps.dtype}")
+            print(f"Raw token ids: {raw_token_ids.dtype}")
             
             # Separate static vs non-static if needed
             if self.insert_static_demographic_tokens:
