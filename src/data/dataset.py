@@ -210,51 +210,8 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
         return len(self.data)
 
     def __getitem__(self, idx: int) -> dict:
-        # # TODO: Implement a Collator class so padding / truncation is done dynamically in the collate function
         x = self.data[idx]
 
-        # if self.mode == "train":
-        #     # If this is a training dataset then we randomly sample a start index and construct the input and target token sequences.
-
-        #     # select random start index
-        #     if self.insert_static_demographic_tokens:
-        #         static_demographic_token_ids = x["ehr"]["token_ids"][x["ehr"]["timestamps"] == 0]
-        #         # We need to sample (sequence_length - len(static_tokens)) tokens from the non-static tokens
-        #         tokens_to_sample = self.sequence_length - len(static_demographic_token_ids)
-        #         non_static_tokens_available = len(x["ehr"]["token_ids"]) - len(static_demographic_token_ids)
-                
-        #         if non_static_tokens_available < tokens_to_sample + 1:  # +1 for target
-        #             raise ValueError(f"Not enough non-static tokens: need {tokens_to_sample + 1}, have {non_static_tokens_available}")
-                
-        #         # Sample from the non-static portion
-        #         start_idx = random.randint(0, non_static_tokens_available - tokens_to_sample - 1) + len(static_demographic_token_ids)
-        #     else:
-        #         available_length = len(x["ehr"]["token_ids"]) - self.sequence_length - 1
-        #         if available_length < 0:
-        #             raise ValueError(f"Sequence too short for training: total_tokens={len(x['ehr']['token_ids'])}, sequence_length={self.sequence_length}")
-        #         start_idx = random.randint(0, available_length)
-
-        #     # construct input and target token sequences
-        #     if self.insert_static_demographic_tokens:
-        #         # Sample the correct number of tokens (sequence_length - static_tokens)
-        #         tokens_to_sample = self.sequence_length - len(static_demographic_token_ids)
-        #         input_token_ids = x["ehr"]["token_ids"][start_idx : start_idx + tokens_to_sample]
-        #         input_timestamps = x["ehr"]["timestamps"][start_idx : start_idx + tokens_to_sample]
-
-        #         target_token_ids = x["ehr"]["token_ids"][start_idx + 1 : start_idx + tokens_to_sample + 1]
-        #         target_timestamps = x["ehr"]["timestamps"][start_idx + 1 : start_idx + tokens_to_sample + 1]
-
-        #         # insert static demographic tokens at the beginning
-        #         input_token_ids = torch.cat([static_demographic_token_ids, input_token_ids])
-        #         input_timestamps = torch.cat([torch.zeros_like(static_demographic_token_ids), input_timestamps])
-        #         target_token_ids = torch.cat([static_demographic_token_ids, target_token_ids])
-        #         target_timestamps = torch.cat([torch.zeros_like(static_demographic_token_ids), target_timestamps])
-        #     else:
-        #         input_token_ids = x["ehr"]["token_ids"][start_idx : start_idx + self.sequence_length]
-        #         input_timestamps = x["ehr"]["timestamps"][start_idx : start_idx + self.sequence_length]
-
-        #         target_token_ids = x["ehr"]["token_ids"][start_idx + 1 : start_idx + self.sequence_length + 1]
-        #         target_timestamps = x["ehr"]["timestamps"][start_idx + 1 : start_idx + self.sequence_length + 1]
         if self.mode == "train":
             # Extract raw tokens/timestamps
             raw_token_ids = x["ehr"]["token_ids"]
@@ -268,7 +225,6 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                 non_static_timestamps = raw_timestamps[~static_mask]
                 
                 # Calculate how much space we have for non-static data
-                # (sequence_length - static_len)
                 max_dynamic_len = self.sequence_length - len(static_tokens)
             else:
                 static_tokens = torch.tensor([], dtype=torch.long)
@@ -276,104 +232,71 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                 non_static_timestamps = raw_timestamps
                 max_dynamic_len = self.sequence_length
 
-            # --- PADDING LOGIC STARTS HERE ---
+            # --- PADDING LOGIC ---
             
-            # Check if we have enough data to fill the sequence
-            # We need +1 for the target (next token)
+            # Check if we have enough data to fill the sequence (+1 for target)
             if len(non_static_tokens) < max_dynamic_len + 1:
                 # CASE 1: Sequence is too short -> PAD IT
                 
                 # Take everything we have
-                input_dynamic = non_static_tokens
-                ts_dynamic = non_static_timestamps
+                # Note: We assume len(non_static) is at least 1 to have an input/target pair, 
+                # but filtering usually ensures this.
                 
-                # Calculate padding needed
-                # We need input length to be exactly max_dynamic_len
-                pad_len = max_dynamic_len - len(input_dynamic)
+                full_source = torch.cat([static_tokens, non_static_tokens])
+                full_timestamps = torch.cat([torch.zeros_like(static_tokens), non_static_timestamps])
                 
-                # Create padding (0 for inputs, 0 for timestamps)
-                pad_zeros = torch.zeros(pad_len, dtype=torch.long)
+                valid_len = len(full_source) - 1 # -1 because we need a next token
                 
-                # 1. Construct Input (Static + Dynamic + Pad)
-                input_token_ids = torch.cat([static_tokens, input_dynamic, pad_zeros])
-                input_timestamps = torch.cat([torch.zeros_like(static_tokens), ts_dynamic, pad_zeros])
-                
-                # 2. Construct Target
-                # For target, we shift by 1. 
-                # The target for the last real token is the first pad (or end token), usually ignored.
-                # We pad targets with -100 (standard PyTorch ignore_index) so the model doesn't learn to predict padding.
-                target_dynamic = torch.cat([non_static_tokens[1:], torch.tensor([0])]) # simplistic next-token logic
-                # Ideally target matches input shifted. For the padded area, target is -100
-                
-                # Let's do a simpler shift on the full padded sequence:
-                full_seq = torch.cat([static_tokens, non_static_tokens, pad_zeros])
-                # Input is 0..N-1
-                input_token_ids = full_seq[:-1] 
-                # Target is 1..N
-                target_token_ids = full_seq[1:].clone()
-                # Set target at padding positions to -100
-                # The valid length is len(static) + len(non_static)
-                valid_len = len(static_tokens) + len(non_static_tokens)
-                # Any target index >= valid_len - 1 (since target is shifted) should be ignored?
-                # Actually, safest is to explicitly pad targets with -100
-                target_pad = torch.full((pad_len,), -100, dtype=torch.long)
-                # Re-construct target carefully:
-                # Real targets: static[1:] + non_static + first_pad? No, standard causal shift:
-                # We just take the exact slice we constructed in input, but shift the source data?
-                # Let's stick to the "Crop" logic but with padding appended.
-                
-                # Actual Input: [Static, Real_Dynamic, 0, 0...]
-                # Actual Target: [Static[1:], Real_Dynamic[0], ..., Real_Dynamic[-1], -100, -100...]
-                # Note: This implies we predict the first dynamic token from the last static token.
-                
-                # Simplified Padded Construction:
-                # 1. Create full buffer of zeros
+                # Initialize buffers with padding values
                 input_token_ids = torch.zeros(self.sequence_length, dtype=torch.long)
                 target_token_ids = torch.full((self.sequence_length,), -100, dtype=torch.long)
                 input_timestamps = torch.zeros(self.sequence_length, dtype=torch.long)
                 target_timestamps = torch.zeros(self.sequence_length, dtype=torch.long)
                 padding_mask = torch.zeros(self.sequence_length, dtype=torch.bool)
 
-                # 2. Fill static
-                n_stat = len(static_tokens)
-                input_token_ids[:n_stat] = static_tokens
-                padding_mask[:n_stat] = True
-                # Target for static part (predicting next static or first dynamic)
-                # Note: usually we don't train on static tokens prediction if they are fixed, but standard LM does.
-                
-                # 3. Fill dynamic
-                # We use the raw concatenated sequence: Static + NonStatic
-                full_source = torch.cat([static_tokens, non_static_tokens])
-                
-                valid_len = len(full_source) - 1 # -1 because we need a next token
-                
-                # Copy inputs
+                # Copy valid data
                 input_token_ids[:valid_len] = full_source[:-1]
-                input_timestamps[:valid_len] = torch.cat([torch.zeros(n_stat), non_static_timestamps])[:-1]
+                input_timestamps[:valid_len] = full_timestamps[:-1]
                 
-                # Copy targets
                 target_token_ids[:valid_len] = full_source[1:]
-                target_timestamps[:valid_len] = torch.cat([torch.zeros(n_stat), non_static_timestamps])[1:]
+                target_timestamps[:valid_len] = full_timestamps[1:]
                 
-                # Update mask
                 padding_mask[:valid_len] = True
                 
             else:
-                # CASE 2: Sequence is long enough -> RANDOM CROP (Existing Logic)
-                # ... (Keep your existing random sampling logic here) ...
-                # Just ensure you define padding_mask at the end
+                # CASE 2: Sequence is long enough -> RANDOM CROP
                 
-                # After defining input_token_ids via random sampling:
+                # Randomly sample a start index from the NON-STATIC portion
+                # available slots = total_non_static - needed_window - 1 (for target)
+                available_start_indices = len(non_static_tokens) - max_dynamic_len - 1
+                start_idx = random.randint(0, available_start_indices)
+                
+                # Slice the dynamic part
+                input_dynamic = non_static_tokens[start_idx : start_idx + max_dynamic_len]
+                target_dynamic = non_static_tokens[start_idx + 1 : start_idx + max_dynamic_len + 1]
+                
+                ts_dynamic = non_static_timestamps[start_idx : start_idx + max_dynamic_len]
+                ts_target_dynamic = non_static_timestamps[start_idx + 1 : start_idx + max_dynamic_len + 1]
+                
+                # Combine with static part
+                input_token_ids = torch.cat([static_tokens, input_dynamic])
+                target_token_ids = torch.cat([static_tokens, target_dynamic]) # Target for static is usually static (or masked), but sticking to original logic
+                
+                input_timestamps = torch.cat([torch.zeros_like(static_tokens), ts_dynamic])
+                target_timestamps = torch.cat([torch.zeros_like(static_tokens), ts_target_dynamic])
+                
+                # Full sequence is valid
                 padding_mask = torch.ones(self.sequence_length, dtype=torch.bool)
 
         elif self.mode == "eval":
-            # If this is an evaluation dataset then the sample has been preprocessed to be a chunk of length sequence_length.
-            # We can just return the input and target token sequences as they are.
-            # We also dont need to insert static demographic tokens as they are already in the input and target token sequences when they were preprocessed.
+            # Evaluation dataset is already chunked perfectly
             input_token_ids = x["ehr"]["token_ids"][:-1]
             input_timestamps = x["ehr"]["timestamps"][:-1]
             target_token_ids = x["ehr"]["token_ids"][1:]
             target_timestamps = x["ehr"]["timestamps"][1:]
+            
+            # Evaluation chunks are full length, so mask is all True
+            padding_mask = torch.ones(len(input_token_ids), dtype=torch.bool)
 
         datapoint = {
             "subject_id": x["subject_id"],
@@ -385,22 +308,6 @@ class NightingaleTrainingDataset(torch.utils.data.Dataset):
                 "input_padding_mask": padding_mask,
             },
         }
-
-        # # if clinical notes are being used, then preprocess them
-        # if self.using_clinical_notes:
-        #     # Select and preprocess clinical notes that fall within the a timestamp range (to prevent attending to future notes)
-        #     # min_timestamp = input_timestamps[0]
-        #     max_timestamp = input_timestamps[-1]
-        #     # clinical_notes = [note for note in x["clinical_notes"] if note["timestamp"] >= min_timestamp and note["timestamp"] <= max_timestamp]
-        #     clinical_notes = [note for note in x["clinical_notes"] if note["timestamp"] <= max_timestamp]
-
-        #     token_ids, notes_mask, tokens_mask = self._preprocess_clinical_notes(clinical_notes)
-
-        #     datapoint["clinical_notes"] = {
-        #         "token_ids": token_ids,
-        #         "notes_mask": notes_mask,
-        #         "tokens_mask": tokens_mask,
-        #     }
 
         return datapoint
 
