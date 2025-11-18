@@ -1,22 +1,34 @@
 #!/bin/bash
+#$ -cwd                 
+#$ -pe smp 8
+#$ -l h_rt=1:0:0
+#$ -l h_vmem=4G
+#$ -j n
+#$ -o /data/home/qc25022/CancEHR-Training/HPC_New/logo/
+#$ -e /data/home/qc25022/CancEHR-Training/HPC_New/loge/
 
-# Shell script to run LLM classification fine-tuning
-# Usage: bash run_text_llm_classifier.sh
+set -e 
 
-# Activate conda environment if needed
-# conda activate your_env_name
+# Set the base directory for your project
+BASE_DIR="/data/home/qc25022/CancEHR-Training"
 
-# Set CUDA device (optional)
-export CUDA_VISIBLE_DEVICES=0
+export WANDB_API_KEY="3256683a0a9a004cf52e04107a3071099a53038e"
 
-# Path to config file
-CONFIG_PATH="src/pipelines/text_based/configs/llm_finetune_classifier.yaml"
+# --- Environment Setup ---
+module load intel intel-mpi python
+source /data/home/qc25022/CancEHR-Training/venv/bin/activate
+
+# --- Execute from Project Root ---
+# Change to the base directory before running the python command
+cd "${BASE_DIR}"
+
+echo "Starting experiment from directory: $(pwd)"
 
 # Run the fine-tuning script
 #python -m src.pipelines.text_based.finetune_llm_classifier \
 #    --config_filepath "$CONFIG_PATH"
 python -m src.pipelines.text_based.test_classifier_setup.py \
-    --config_filepath "$CONFIG_PATH"
+    --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
 echo "Classification fine-tuning complete!"
 
 
