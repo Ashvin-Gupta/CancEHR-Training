@@ -91,6 +91,7 @@ def train(
 
         # evaluate
         model.eval()
+        print(f'Length of val_dataloader: {len(val_dataloader)}')
         with torch.no_grad():
             logger.info(" - Starting evaluation")
 
@@ -116,7 +117,8 @@ def train(
                 val_loss.append(loss.item())
 
                 # log every 10% of the way through the epoch
-                if idx % (len(val_dataloader) // 10) == 0 and logger is not None:
+                log_interval = max(1,len(val_dataloader) // 10)
+                if idx % log_interval == 0 and logger is not None:
                     logger.info(
                         f"  -- Completed evaluation batch {idx} of {len(val_dataloader)} ({idx / len(val_dataloader) * 100:.2f}%) | mean running val loss: {sum(val_loss) / len(val_loss)}"
                     )
