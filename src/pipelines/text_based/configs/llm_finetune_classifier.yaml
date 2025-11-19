@@ -28,8 +28,8 @@ training:
   # Training hyperparameters
   epochs: 20
   batch_size: 8
-  eval_batch_size: 8
-  learning_rate: 1e-3  # Higher LR for training from scratch classification head
+  eval_batch_size: 12
+  learning_rate: 1e-5
   weight_decay: 0.01
   warmup_steps: 100
   
