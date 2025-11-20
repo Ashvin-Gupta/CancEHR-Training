@@ -136,6 +136,9 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         os.environ["WANDB_PROJECT"] = wandb_config.get("project", "token-pretraining")
         run_name = wandb_config.get("run_name", default_run_name)
         
+        print(f"wandb module location: {wandb.__file__}")
+        print(f"wandb has 'init': {hasattr(wandb, 'init')}")
+        
         wandb.init(
             project=wandb_config.get("project", "token-pretraining"),
             config=config,  # Pass entire config to wandb
