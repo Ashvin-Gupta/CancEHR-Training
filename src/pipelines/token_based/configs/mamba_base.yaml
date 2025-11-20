@@ -11,7 +11,6 @@ model:
 wandb:
   enabled: true
   project: "cpt-mamba-20-11-25"
-  run_name: "mamba_base"
 
   # Mamba-specific parameters
   # SSM architecture parameters
@@ -55,9 +54,9 @@ training:
   max_grad_norm: 1.0
 
 data:
-  train_dataset_dir: "/data/scratch/qc25022/gallbladder/tokenised_data_word_level/cprd_upgi/train"
-  val_dataset_dir: "/data/scratch/qc25022/gallbladder/tokenised_data_word_level/cprd_upgi/tuning"
-  vocab_path: "/data/scratch/qc25022/gallbladder/tokenised_data_word_level/cprd_upgi/vocab.csv"
+  train_dataset_dir: "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi/train"
+  val_dataset_dir: "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi/tuning"
+  vocab_path: "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi/vocab.csv"
   insert_static_demographic_tokens: false
   sequence_length: 4096
   batch_size: 8
