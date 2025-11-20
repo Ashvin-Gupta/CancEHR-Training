@@ -16,7 +16,6 @@ import torch
 import yaml
 from datetime import datetime
 import wandb
-import inspect
 
 from src.data.dataloader import get_dataloader
 from src.training.token_trainer import train
@@ -96,9 +95,6 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
 
     Experiment results are saved to results/token_based/{experiment_name}.
     """
-    print(f'wandb:', wandb)
-    print("wandb file:", getattr(wandb, "__file__", None))
-    print("wandb module members:", dir(wandb)[:20])
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
@@ -242,7 +238,7 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         epochs=config["training"]["epochs"],
         lr_scheduler=lr_scheduler,
         logger=logger,
-        wandb_config=wandb_config.get("enabled", False),
+        wandb_enabled=wandb_config.get("enabled", False),
     )
     if wandb_config.get("enabled", False):
         wandb.finish()
