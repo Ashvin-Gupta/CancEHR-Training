@@ -2,6 +2,7 @@ import os
 from logging import Logger
 import torch
 from tqdm import tqdm
+import wandb
 from src.training.utils import build_warmup_cosine_scheduler, get_nested_value, create_nested_dict
 
 def train(
@@ -15,6 +16,7 @@ def train(
         epochs: int = 10,
         lr_scheduler: torch.optim.lr_scheduler.LambdaLR = None,
         logger: Logger = None,
+        wandb_enabled: bool = False,
     ) -> None:
     """
     Trains a model and saves outputs to experiment_dir.
@@ -55,6 +57,7 @@ def train(
 
         # train
         train_pb = tqdm(train_dataloader, desc="Training", leave=False)
+        epoch_train_losses = []
         for idx, batch in enumerate(train_pb):
 
             # create input dictionary
@@ -81,17 +84,29 @@ def train(
                 lr_scheduler.step()
 
             train_loss.append(loss.item())
+            epoch_train_losses.append(loss.item())
 
             # log every 10% of the way through the epoch
             if idx % (len(train_dataloader) // 10) == 0 and logger is not None:
                 last_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else optimiser.param_groups[0]['lr']
+                avg_train_loss_so_far = sum(epoch_train_losses) / len(epoch_train_losses) if epoch_train_losses else 0.0
                 logger.info(
                     f"  -- Completed training batch {idx} of {len(train_dataloader)} ({idx / len(train_dataloader) * 100:.2f}%) | mean running train loss: {sum(train_loss) / len(train_loss)} | current lr: {last_lr}"
                 )
+            # Log to wandb during training (add this)
+                if wandb_enabled:
+                    wandb.log({
+                        "train/batch_loss": loss.item(),
+                        "train/running_avg_loss": avg_train_loss_so_far,
+                        "train/learning_rate": last_lr,
+                        "train/epoch": epoch,
+                        "train/step": epoch * len(train_dataloader) + idx
+                    })
 
         # evaluate
         model.eval()
         print(f'Length of val_dataloader: {len(val_dataloader)}')
+        epoch_val_losses = []
         with torch.no_grad():
             logger.info(" - Starting evaluation")
 
@@ -115,6 +130,7 @@ def train(
                 logits = logits.view(-1, logits.shape[-1])  # (batch_size * sequence_length, vocab_size)
                 loss = loss_function(logits, targets)
                 val_loss.append(loss.item())
+                epoch_val_losses.append(loss.item())
 
                 # log every 10% of the way through the epoch
                 log_interval = max(1,len(val_dataloader) // 10)
@@ -125,6 +141,15 @@ def train(
 
         avg_train_loss = sum(train_loss) / len(train_loss)
         avg_val_loss = sum(val_loss) / len(val_loss)
+
+        if wandb_enabled:
+            last_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else optimiser.param_groups[0]['lr']
+            wandb.log({
+                "epoch": epoch,
+                "train/epoch_loss": avg_train_loss,
+                "val/epoch_loss": avg_val_loss,
+                "train/learning_rate": last_lr,
+            })
 
         if logger is not None:
             logger.info(

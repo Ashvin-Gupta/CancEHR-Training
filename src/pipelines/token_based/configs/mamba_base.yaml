@@ -8,6 +8,11 @@ model:
   dropout: 0.3
   context_length: 4096
 
+wandb:
+  enabled: true
+  project: "cpt-mamba-20-11-25"
+  run_name: "mamba_base"
+
   # Mamba-specific parameters
   # SSM architecture parameters
   d_state: 16          # SSM state expansion factor (standard: 16)

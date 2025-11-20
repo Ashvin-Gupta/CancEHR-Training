@@ -1,7 +1,7 @@
 """
 Token-based pretraining/fine-tuning script.
 
-Trains custom transformer decoder, LSTM, or GPT-2 models on integer token sequences.
+Trains custom transformer decoder, LSTM, or GPT-2 models, or mamba model on integer token sequences.
 This script handles both pretraining and fine-tuning depending on the task configuration.
 
 Usage:
@@ -15,6 +15,7 @@ import pandas as pd
 import torch
 import yaml
 from datetime import datetime
+import wandb
 
 from src.data.dataloader import get_dataloader
 from src.training.token_trainer import train
@@ -115,6 +116,31 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
     # Create experiment directory
     os.makedirs(experiment_dir, exist_ok=True)
 
+    # Set up WandB (add this after config loading, before training)
+    wandb_config = config.get('wandb', {})
+    
+    # Build default run name from hyperparameters
+    model_name = config['model']['type']
+    default_run_name = (
+        f"{model_name}-pretrain"
+        f"_lr{config['optimiser']['lr']}"
+        f"_bs{config['data']['batch_size']}"
+        f"_epochs{config['training']['epochs']}"
+        f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    )
+    
+    if wandb_config.get('enabled', False):
+        os.environ["WANDB_PROJECT"] = wandb_config.get("project", "token-pretraining")
+        run_name = wandb_config.get("run_name", default_run_name)
+        
+        wandb.init(
+            project=wandb_config.get("project", "token-pretraining"),
+            config=config,  # Pass entire config to wandb
+            name=run_name
+        )
+        logger.info(f"WandB enabled - Project: {wandb_config.get('project', 'token-pretraining')}, Run: {run_name}")
+
+
     # create experiment logger
     logger = create_logger(experiment_dir, experiment_name)
 
@@ -209,7 +235,10 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
         epochs=config["training"]["epochs"],
         lr_scheduler=lr_scheduler,
         logger=logger,
+        wandb_config=wandb_config.get("enabled", False),
     )
+    if wandb_config.get("enabled", False):
+        wandb.finish()
 
 
 def validate_config(config: dict) -> None:
