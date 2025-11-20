@@ -116,6 +116,9 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
     # Create experiment directory
     os.makedirs(experiment_dir, exist_ok=True)
 
+    # create experiment logger
+    logger = create_logger(experiment_dir, experiment_name)
+
     # Set up WandB (add this after config loading, before training)
     wandb_config = config.get('wandb', {})
     
@@ -139,10 +142,7 @@ def run_experiment(config_path: str, experiment_name: str) -> None:
             name=run_name
         )
         logger.info(f"WandB enabled - Project: {wandb_config.get('project', 'token-pretraining')}, Run: {run_name}")
-
-
-    # create experiment logger
-    logger = create_logger(experiment_dir, experiment_name)
+    
 
     logger.info(f"Experiment directory: {experiment_dir}")
     logger.info(f"Experiment name: {experiment_name}")
