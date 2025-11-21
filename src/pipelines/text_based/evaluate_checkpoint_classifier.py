@@ -95,6 +95,7 @@ def main(config_path: str):
         per_device_eval_batch_size=8,
         report_to="none",
         bf16=True, # Ensure this matches your hardware
+        remove_unused_columns=False,
     )
     
     trainer = Trainer(
