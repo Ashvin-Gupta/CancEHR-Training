@@ -118,7 +118,16 @@ def main(config_path: str):
         
     # 9. Generate Plots
     print("\nGenerating PR and ROC curves...")
-    logits = pred_output.predictions
+    predictions = pred_output.predictions
+    print(f"Predictions shape: {predictions.shape}")
+    
+    # Check if predictions is a tuple (which happens because your model returns hidden_states too)
+    if isinstance(predictions, tuple):
+        # The first element is the logits [Batch, 2]
+        # The second element is hidden_states [Batch, 4096]
+        logits = predictions[0] 
+    else:
+        logits = predictions
     labels = pred_output.label_ids
     probs = torch.softmax(torch.tensor(logits), dim=1).numpy()[:, 1]
     

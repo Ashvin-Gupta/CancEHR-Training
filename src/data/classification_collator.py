@@ -48,7 +48,6 @@ class ClassificationCollator:
             return None
         
         # Extract text and labels
-        print(f"DEBUG: First batch item structure: {batch[0]}")
         texts = [item['text'] for item in batch]
         labels = torch.stack([item['label'] for item in batch])
         
