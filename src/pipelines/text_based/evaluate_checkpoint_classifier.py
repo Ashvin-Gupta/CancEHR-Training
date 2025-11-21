@@ -13,18 +13,20 @@ from src.evaluations.visualisation import plot_classification_performance
 from src.utils.load_LoRA_model import load_LoRA_model
 
 def main(config_path: str):
-    print("=" * 80)
-    finetuned_checkpoint = model_config['finetune_checkpoint']
-    print(f"Evaluating Checkpoint: {finetuned_checkpoint}")
-    print("=" * 80)
+    
     
     # 1. Load Configuration
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     
+    print("=" * 80)
+    
     data_config = config['data']
     model_config = config['model']
-    
+    finetuned_checkpoint = model_config['finetune_checkpoint']
+    print(f"Evaluating Checkpoint: {finetuned_checkpoint}")
+    print("=" * 80)
+        
     # 2. Initialize Base Model using your Helper
     # This handles the resizing, LoRA adapters, and tokenizer setup automatically
     print("\nLoading base model architecture...")
@@ -124,7 +126,7 @@ def main(config_path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True, help="Path to config yaml")
+    parser.add_argument("--config_filepath", type=str, required=True, help="Path to config yaml")
     args = parser.parse_args()
     
-    main(args.config)
+    main(args.config_filepath)
