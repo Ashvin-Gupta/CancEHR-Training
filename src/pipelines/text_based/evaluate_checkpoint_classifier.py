@@ -78,8 +78,8 @@ def main(config_path: str):
         "format": 'text',
         "cutoff_months": data_config.get("cutoff_months", 1),
         "max_sequence_length": None,
-        "tokenizer": None
-    }
+        "tokenizer": None    
+    }   
     val_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
     
     # 6. Create Collator
