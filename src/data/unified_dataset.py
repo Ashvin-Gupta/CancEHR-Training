@@ -29,7 +29,7 @@ class UnifiedEHRDataset(Dataset):
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file)
         # Load the patient records from the .pkl files for the specified split
         if split == 'tuning' or split == 'held_out':
-            self.patient_records = self._load_data(data_dir, split, limit=3)
+            self.patient_records = self._load_data(data_dir, split, limit=1)
         else:
             # Chaning to 5 to see result and inference
             self.patient_records = self._load_data(data_dir, split)

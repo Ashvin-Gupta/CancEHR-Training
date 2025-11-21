@@ -119,7 +119,13 @@ def main(config_path: str):
     # 9. Generate Plots
     print("\nGenerating PR and ROC curves...")
     predictions = pred_output.predictions
-    print(f"Predictions shape: {predictions.shape}")
+    print(f"Predictions type: {type(predictions)}")
+    if isinstance(predictions, tuple):
+        print(f"Predictions is a tuple with {len(predictions)} elements")
+        for i, pred in enumerate(predictions):
+            print(f"Element {i} shape: {pred.shape}")
+    else:
+        print(f"Predictions shape: {predictions.shape}")
     
     # Check if predictions is a tuple (which happens because your model returns hidden_states too)
     if isinstance(predictions, tuple):
