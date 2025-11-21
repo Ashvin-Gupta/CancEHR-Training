@@ -182,14 +182,7 @@ class UnifiedEHRDataset(Dataset):
                 "tokens": torch.tensor(token_ids, dtype=torch.long),
                 "label": torch.tensor(label, dtype=torch.long)
             }
-        # elif self.format == 'text':
-        #     string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
-        #     translated_phrases = [self._translate_token(code) for code in string_codes]
-        #     narrative = ", ".join([phrase for phrase in translated_phrases if phrase])
-        #     return {
-        #         "text": narrative,
-        #         "label": torch.tensor(label, dtype=torch.long)
-        #     }
+   
         elif self.format == 'text':
             string_codes = [self.id_to_token_map.get(tid, "") for tid in token_ids]
             translated_phrases = []

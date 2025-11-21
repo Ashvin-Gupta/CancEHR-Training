@@ -7,6 +7,7 @@ model:
   # This should contain the LoRA adapters and extended tokenizer
   unsloth_model: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
   pretrained_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test/checkpoint-3000"
+  finetune_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_classifier_Qwen3-8B/checkpoint-11000"
   
   # Model architecture settings
   hidden_size: 4096  # Qwen3-8B hidden dimension (check your model config if different)

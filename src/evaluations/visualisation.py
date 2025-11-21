@@ -1,0 +1,65 @@
+# src/evaluation/visualization.py
+
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import precision_recall_curve, roc_curve, auc
+
+def plot_classification_performance(labels, probs, output_dir):
+    """
+    Plots PR Curve, ROC Curve, and Metric vs. Threshold curves.
+    
+    Args:
+        labels: Array of ground truth labels (0 or 1)
+        probs: Array of positive class probabilities (floats 0-1)
+        output_dir: Directory to save the plots
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # 1. Precision-Recall Curve
+    precision, recall, thresholds = precision_recall_curve(labels, probs)
+    pr_auc = auc(recall, precision)
+    
+    plt.figure(figsize=(8, 6))
+    plt.plot(recall, precision, label=f'PR Curve (AUC = {pr_auc:.2f})')
+    plt.xlabel('Recall (Sensitivity)')
+    plt.ylabel('Precision (Positive Predictive Value)')
+    plt.title('Precision-Recall Curve')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.savefig(os.path.join(output_dir, 'pr_curve.png'))
+    plt.close()
+
+    # 2. ROC Curve
+    fpr, tpr, _ = roc_curve(labels, probs)
+    roc_auc = auc(fpr, tpr)
+    
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, label=f'ROC Curve (AUC = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], 'k--', linestyle='--')  # Diagonal random guess
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate (Recall)')
+    plt.title('ROC Curve')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.savefig(os.path.join(output_dir, 'roc_curve.png'))
+    plt.close()
+
+    # 3. Metrics vs. Threshold (The most useful one for you!)
+    # Note: thresholds array is 1 element shorter than precision/recall
+    plt.figure(figsize=(10, 6))
+    plt.plot(thresholds, precision[:-1], 'b--', label='Precision')
+    plt.plot(thresholds, recall[:-1], 'g-', label='Recall')
+    plt.xlabel('Decision Threshold')
+    plt.ylabel('Score')
+    plt.title('Precision and Recall vs. Threshold')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Add marker for 0.5 default
+    plt.axvline(x=0.5, color='k', linestyle=':', alpha=0.5)
+    
+    plt.savefig(os.path.join(output_dir, 'threshold_analysis.png'))
+    plt.close()
+    
+    print(f"Plots saved to: {output_dir}")

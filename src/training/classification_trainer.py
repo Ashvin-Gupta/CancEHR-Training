@@ -13,6 +13,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformers import TrainingArguments, Trainer
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score
+from src.evaluations.visualisation import plot_classification_performance
+import matplotlib.pyplot as plt
 import numpy as np
 from typing import Dict, Any
 
@@ -257,6 +259,24 @@ def run_classification_training(
     for key, value in eval_results.items():
         print(f"  {key}: {value:.4f}")
     print("="*80)
+
+    print("\nGenerating detailed ROC and Precision-Recall curves...")
+    
+    # 1. Get raw predictions (logits) for every patient in validation set, evaluate() only gives averages; predict() gives the actual scores
+    pred_output = trainer.predict(val_dataset)
+    
+    # 2. Convert logits to probabilities
+    logits = pred_output.predictions
+    
+    # We take column 1 because that is the probability of "Cancer"
+    probs = torch.softmax(torch.tensor(logits), dim=1).numpy()[:, 1]
+    labels = pred_output.label_ids
+    
+    # 3. Create the folder for plots
+    plot_output_dir = os.path.join(training_config['output_dir'], "plots")
+    
+    # 4. Call your helper function to draw the graphs
+    plot_classification_performance(labels, probs, plot_output_dir)
     
     return trainer, eval_results
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd                 
 #$ -pe smp 8
-#$ -l h_rt=24:0:0
+#$ -l h_rt=1:0:0
 #$ -l h_vmem=11G
 #$ -l gpu=1
 #$ -j n
@@ -25,11 +25,14 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-# Run the fine-tuning script
-python -m src.pipelines.text_based.finetune_llm_classifier \
+# # Run the fine-tuning script
+# python -m src.pipelines.text_based.finetune_llm_classifier \
+#    --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
+
+# Run the evaluation script
+python -m src.pipelines.text_based.evaluate_checkpoint_classifier \
    --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
-# python -m src.pipelines.text_based.test_classifier_setup --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
-#     --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
+
 echo "Classification fine-tuning complete!"
 
 
