@@ -38,6 +38,9 @@ class EHRTokenExtensionStaticTokenizer:
         ]
 
         local_rank = int(os.environ.get("LOCAL_RANK", 0))
+        target_device = f"cuda:{local_rank}"
+        
+        print(f"[Rank {local_rank}] Loading model on {target_device}...")
         
         # Load model and tokenizer
         model, tokenizer = FastLanguageModel.from_pretrained(
@@ -75,6 +78,14 @@ class EHRTokenExtensionStaticTokenizer:
             # Resize model embeddings to accommodate new tokens
             model.resize_token_embeddings(len(tokenizer))
             print(f"Resized model embeddings to {len(tokenizer)} tokens")
+            print(f"[Rank {local_rank}] Resized model embeddings.")
+
+            # Explicitly move the resized embeddings to the correct GPU.
+            # Without this, new embeddings might default to GPU 0, causing the crash.
+            model.get_input_embeddings().to(target_device)
+            if hasattr(model, "get_output_embeddings") and model.get_output_embeddings() is not None:
+                model.get_output_embeddings().to(target_device)
+            print(f"[Rank {local_rank}] Embeddings enforced to {target_device}.")
         else:
             print("No new tokens to add")
         

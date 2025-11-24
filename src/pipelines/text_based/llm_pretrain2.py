@@ -125,10 +125,7 @@ def run_ehr_inference(model, tokenizer, prompt: str, max_new_tokens: int = 256, 
     FastLanguageModel.for_inference(model)
 
     # Encode the prompt and move to the correct device (assuming CUDA is available)
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
+    device = model.device 
         
     inputs = tokenizer([prompt], return_tensors="pt").to(device)
 
