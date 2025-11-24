@@ -72,6 +72,23 @@ class LLMClassifier(nn.Module):
         self.classifier = nn.Linear(hidden_size, num_labels)
         print(f"  - Added classification head: {hidden_size} -> {num_labels}")
     
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        """
+        Delegate gradient checkpointing enable to the base model.
+        """
+        if hasattr(self.base_model, "gradient_checkpointing_enable"):
+            self.base_model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
+
+    def gradient_checkpointing_disable(self):
+        if hasattr(self.base_model, "gradient_checkpointing_disable"):
+            self.base_model.gradient_checkpointing_disable()
+
+    def get_input_embeddings(self):
+        """
+        Helper often needed by Trainer to verify model compatibility.
+        """
+        return self.base_model.get_input_embeddings()
+    
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor, labels: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         """
         Forward pass for classification.
