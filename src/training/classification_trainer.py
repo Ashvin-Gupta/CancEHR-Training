@@ -129,9 +129,11 @@ class LLMClassifier(nn.Module):
         """Print the number of trainable vs total parameters."""
         trainable_params = 0
         all_params = 0
-        for _, param in self.named_parameters():
+        print("\nTrainable parameter groups:")
+        for name, param in self.named_parameters():
             all_params += param.numel()
             if param.requires_grad:
+                print(f"  - {name}: {param.numel():,} params")
                 trainable_params += param.numel()
         
         print(f"\n{'='*80}")

@@ -12,6 +12,7 @@ import yaml
 import os
 import wandb
 import torch
+import pprint
 from huggingface_hub import login
 
 from src.data.unified_dataset import UnifiedEHRDataset
@@ -61,6 +62,10 @@ def main(config_path: str):
     # 1. Load Config
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+    
+    print('Loaded configuration')
+    pprint.pprint(config)
+    print("=" * 80)
     
     model_config = config['model']
     experiment_config = config.get('experiment', {})
