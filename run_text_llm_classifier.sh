@@ -28,8 +28,8 @@ echo "Starting experiment from directory: $(pwd)"
 
 # # Run the fine-tuning script
 python -m src.pipelines.text_based.finetune_llm_classifier \
-   # --config_filepath src/pipelines/text_based/configs/llm_classify_no_pretrain.yaml #no pretrain, only classifier
    --config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls.yaml #pretrained, only classifier
+   # --config_filepath src/pipelines/text_based/configs/llm_classify_no_pretrain.yaml #no pretrain, only classifier
    # --config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls_lora.yaml #pretrained, classifier + lora
 
 
