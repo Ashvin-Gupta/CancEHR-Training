@@ -10,7 +10,7 @@ from src.data.unified_dataset import UnifiedEHRDataset
 from src.data.classification_collator import ClassificationCollator
 from src.training.classification_trainer import LLMClassifier, compute_metrics
 from src.evaluations.visualisation import plot_classification_performance
-from src.utils.load_LoRA_model import load_LoRA_model
+from src.training.utils import load_LoRA_model
 
 def main(config_path: str):
     

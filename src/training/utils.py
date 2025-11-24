@@ -1,3 +1,7 @@
+import unsloth
+from unsloth import FastLanguageModel
+from transformers import AutoTokenizer
+import yaml
 import math
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -65,3 +69,99 @@ def build_warmup_cosine_scheduler(optimizer, total_steps, warmup_steps=None, lr_
         return lr_min_ratio + (1.0 - lr_min_ratio) * cosine   # 1 -> floor
 
     return LambdaLR(optimizer, lr_lambda)
+
+def load_LoRA_model(config: dict):
+    model_config = config['model']
+    data_config = config['data']
+    training_config = config['training']
+    
+    print("\n" + "=" * 80)
+    print(f"Loading pretrained model from: {model_config['pretrained_checkpoint']}")
+    print("=" * 80)
+
+    # STEP A: Explicitly load the correct Base Model (Qwen 2.5)
+    # We force the model_name to be the base model, NOT the checkpoint path yet.
+    base_model_name = model_config['unsloth_model']
+    
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=base_model_name, 
+        max_seq_length=data_config['max_length'],
+        dtype=None,
+        load_in_4bit=training_config.get('load_in_4bit', True),
+    )
+    print(f'Original tokenizer size: {len(tokenizer)}')
+
+    # STEP B: Load the tokenizer from your checkpoint to get the new vocab size
+    # This ensures we have the 151673 size including your 4 special tokens
+    checkpoint_tokenizer = AutoTokenizer.from_pretrained(model_config['pretrained_checkpoint'])
+    print(f'Checkpoint tokenizer size: {len(checkpoint_tokenizer)}')
+    # Replace the standard tokenizer with your extended one
+    tokenizer = checkpoint_tokenizer
+    print(f'New tokenizer size: {len(tokenizer)}')
+    # STEP C: Resize the model embeddings to match the checkpoint (151673)
+    model.resize_token_embeddings(len(tokenizer))
+    
+    # STEP D: Load the adapters (PeftModel)
+    # Since FastLanguageModel wraps the model, we access the internal model to load adapters if needed,
+    # but usually, we can just load the adapter on top.
+    model.load_adapter(model_config['pretrained_checkpoint'])
+
+    print(f"  - Loaded model with {len(tokenizer)} tokens in vocabulary")
+    print(f"  - Model type: {type(model).__name__}")
+    return model, tokenizer
+
+def load_model_for_inference(config_path: str, checkpoint_path: str):
+    """
+    Loads a trained Unsloth LoRA (PEFT) model and its tokenizer from a checkpoint,
+    correctly handling the resized vocabulary.
+
+    Args:s
+        config_path: Path to the original YAML config file (to get model settings).
+        checkpoint_path: Path to the specific checkpoint directory 
+                         (e.g., "outputs/final_model" or "outputs/checkpoint-1000").
+
+    Returns:
+        (model, tokenizer): The loaded model and tokenizer ready for inference.
+    """
+    print(f"\n" + "=" * 80)
+    print(f"Loading model for inference from: {checkpoint_path}")
+    print(f"Using config for settings from: {config_path}")
+    print("=" * 80)
+
+    # 1. Load config to get model parameters (like 4bit, max_length)
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    
+    training_config = config.get('training', {})
+    model_config = config.get('model', {})
+
+    load_in_4bit = training_config.get('load_in_4bit', True)
+    max_seq_length = model_config.get('max_length', 512)
+    
+    # 2. Load the model and tokenizer from the checkpoint directory
+    # Unsloth's from_pretrained is smart:
+    # 1. It loads the tokenizer from checkpoint_path.
+    # 2. It reads adapter_config.json to find the base_model.
+    # 3. It loads the base_model (e.g., "unsloth/Qwen3-0.6B-Base-unsloth-bnb-4bit").
+    # 4. It sees the tokenizer vocab size is LARGER than the base model's.
+    # 5. It automatically calls model.resize_token_embeddings(len(tokenizer)).
+    # 6. It THEN loads the LoRA adapter weights from the checkpoint.
+    
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name = checkpoint_path, # This is the key
+        max_seq_length = max_seq_length,
+        dtype = None, # Autodetect
+        load_in_4bit = load_in_4bit,
+    )
+
+    print(f"\nSuccessfully loaded model from {checkpoint_path}")
+    print(f"  - Tokenizer vocab size: {len(tokenizer)}")
+    print(f"  - Model input embed size:  {model.get_input_embeddings().weight.shape[0]}")
+    print(f"  - Model output embed size: {model.get_output_embeddings().weight.shape[0]}")
+
+    if len(tokenizer) != model.get_input_embeddings().weight.shape[0]:
+        print("\n🚨 WARNING: Tokenizer and model embedding size mismatch!")
+    else:
+        print("  - Tokenizer and model embedding sizes match. ✅")
+    
+    return model, tokenizer

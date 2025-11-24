@@ -11,7 +11,7 @@ model:
 
 wandb:
   enabled: true
-  project: "cpt-Qwen-17-11-25"
+  project: "Pretrain-Qwen3-8B-Pancreas"
   # run_name: null  # Will be auto-generated from config values during training
 
 lora:
@@ -22,12 +22,12 @@ lora:
   bias: "none"
 
 training:
-  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test"
+  output_dir: "/data/scratch/qc25022/pancreas/experiments/Pretrain-Qwen3-8B-Pancreas"
   overwrite_output_dir: true
   framework: 'unsloth'  # Use peft for standard HF PEFT
   
   # Training hyperparameters
-  epochs: 10
+  epochs: 5
   batch_size: 8
   eval_batch_size: 4
   learning_rate: 1e-5

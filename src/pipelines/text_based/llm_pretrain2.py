@@ -220,6 +220,8 @@ def main(config_path: str):
             config=config, # Pass entire YAML as defaults
             name=run_name
         )
+        # Update wandb config with the full config
+        wandb.config.update(config, allow_val_change=True)
     else:
         run_name = default_run_name
         report_to = "none"

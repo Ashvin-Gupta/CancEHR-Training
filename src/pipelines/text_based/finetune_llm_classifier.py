@@ -18,7 +18,7 @@ from huggingface_hub import login
 from src.data.unified_dataset import UnifiedEHRDataset
 from src.data.classification_collator import ClassificationCollator
 from src.training.classification_trainer import LLMClassifier, run_classification_training
-from src.utils.load_LoRA_model import load_LoRA_model
+from src.training.utils import load_LoRA_model
 from src.pipelines.text_based.token_adaption2 import EHRTokenExtensionStaticTokenizer
 
 EXPERIMENT_NO_PRETRAIN = "no_pretrain"
@@ -89,6 +89,8 @@ def main(config_path: str):
             # Auto-generate run name
             run_name = f"classifier_{config.get('name', 'default')}"
         wandb_config['run_name'] = run_name
+        # Update wandb config with the full config
+        wandb.config.update(config, allow_val_change=True)
         print(f"\nWandB enabled - Project: {wandb_config['project']}, Run: {run_name}")
     
     # 3. HuggingFace Login (skip for pure classifier-only mode unless forced)
