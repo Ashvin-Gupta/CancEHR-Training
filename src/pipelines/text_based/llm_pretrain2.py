@@ -24,7 +24,7 @@ from collections import defaultdict, Counter
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
 from datasets import Dataset
-
+import pprint
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -186,6 +186,10 @@ def main(config_path: str):
     
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+    
+    print('Loaded configuration')
+    pprint.pprint(config)
+    print("=" * 80)
 
     # 2. Set up WandB and hugging face token
     wandb_config = config.get('wandb', {})
