@@ -9,7 +9,7 @@ experiment:
 
 model:
   unsloth_model: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
-  pretrained_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test/final_model"
+  pretrained_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test/checkpoint-5000"
   hidden_size: 4096
   num_labels: 2
   freeze_llm: true          # Keep base model frozen, only LoRA + classifier train
