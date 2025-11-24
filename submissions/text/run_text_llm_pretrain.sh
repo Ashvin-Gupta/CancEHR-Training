@@ -27,8 +27,8 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-# python -m src.pipelines.text_based.pretrain_llm --config_filepath src/pipelines/text_based/configs/llm_pretrain.yaml
-python -m src.pipelines.text_based.llm_pretrain2 --config_filepath src/pipelines/text_based/configs/llm_pretrain.yaml
+# python -m src.pipelines.text_based.llm_pretrain2 --config_filepath src/pipelines/text_based/configs/llm_pretrain.yaml
+torchrun --nproc_per_node=2 python -m src.pipelines.text_based.llm_pretrain2 --config_filepath src/pipelines/text_based/configs/llm_pretrain.yaml
 
 echo "Pipeline finished."
 deactivate
