@@ -4,7 +4,7 @@ import unsloth
 from unsloth import FastLanguageModel
 import torch.nn.functional as F
 import pandas as pd
-
+import os
 '''
 This script is used to translate the EHR tokens to natural language.
 It is in the format where the natural language events are split by special tokens which are then added to the tokenizer.
@@ -36,6 +36,8 @@ class EHRTokenExtensionStaticTokenizer:
         tokens_to_add = [
             "<TIME>", "<DEMOGRAPHIC>", "<EVENT>", "<VALUE>",
         ]
+
+        local_rank = int(os.environ.get("LOCAL_RANK", 0))
         
         # Load model and tokenizer
         model, tokenizer = FastLanguageModel.from_pretrained(
@@ -43,6 +45,7 @@ class EHRTokenExtensionStaticTokenizer:
             max_seq_length=max_seq_length,
             dtype=None,
             load_in_4bit=load_in_4bit,
+            device_map={"": local_rank}
         )
         
         # Get current vocabulary
