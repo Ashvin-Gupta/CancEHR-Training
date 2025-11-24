@@ -11,14 +11,46 @@ import argparse
 import yaml
 import os
 import wandb
+import torch
 from huggingface_hub import login
-from unsloth import FastLanguageModel
 
 from src.data.unified_dataset import UnifiedEHRDataset
 from src.data.classification_collator import ClassificationCollator
 from src.training.classification_trainer import LLMClassifier, run_classification_training
 from src.utils.load_LoRA_model import load_LoRA_model
-from transformers import AutoTokenizer
+from src.pipelines.text_based.token_adaption2 import EHRTokenExtensionStaticTokenizer
+
+EXPERIMENT_NO_PRETRAIN = "no_pretrain"
+EXPERIMENT_PRETRAIN_ONLY_CLASSIFIER = "pretrained_cls"
+EXPERIMENT_PRETRAIN_CLASSIFIER_LORA = "pretrained_cls_lora"
+
+
+def load_model_for_mode(config: dict, experiment_mode: str):
+    """
+    Load the correct model/tokenizer pair based on the experiment mode.
+    """
+    data_config = config['data']
+    training_config = config['training']
+    model_config = config['model']
+    
+    if experiment_mode == EXPERIMENT_NO_PRETRAIN:
+        translator = EHRTokenExtensionStaticTokenizer()
+        model, tokenizer = translator.extend_tokenizer(
+            model_name=model_config['unsloth_model'],
+            max_seq_length=data_config['max_length'],
+            load_in_4bit=training_config.get('load_in_4bit', True)
+        )
+        print("\nLoaded base model without continued pretraining. Only the classifier head will train.")
+        return model, tokenizer
+    
+    if experiment_mode in (EXPERIMENT_PRETRAIN_ONLY_CLASSIFIER, EXPERIMENT_PRETRAIN_CLASSIFIER_LORA):
+        if not model_config.get('pretrained_checkpoint'):
+            raise ValueError(
+                f"'model.pretrained_checkpoint' must be set for experiment mode '{experiment_mode}'."
+            )
+        return load_LoRA_model(config)
+    
+    raise ValueError(f"Unknown experiment mode '{experiment_mode}'.")
 
 
 def main(config_path: str):
@@ -31,9 +63,18 @@ def main(config_path: str):
         config = yaml.safe_load(f)
     
     model_config = config['model']
+    experiment_config = config.get('experiment', {})
+    experiment_mode = experiment_config.get('mode', EXPERIMENT_PRETRAIN_ONLY_CLASSIFIER)
     data_config = config['data']
     training_config = config['training']
     wandb_config = config.get('wandb', {})
+    
+    mode_msg = {
+        EXPERIMENT_NO_PRETRAIN: "No continued pretraining - classifier head only.",
+        EXPERIMENT_PRETRAIN_ONLY_CLASSIFIER: "Using continued-pretrained checkpoint - classifier head only.",
+        EXPERIMENT_PRETRAIN_CLASSIFIER_LORA: "Using continued-pretrained checkpoint - training classifier head + LoRA adapters."
+    }[experiment_mode]
+    print(f"Experiment mode: {experiment_mode} -> {mode_msg}")
     
     # 2. Set up WandB
     if wandb_config.get('enabled', False):
@@ -45,29 +86,56 @@ def main(config_path: str):
         wandb_config['run_name'] = run_name
         print(f"\nWandB enabled - Project: {wandb_config['project']}, Run: {run_name}")
     
-    # 3. HuggingFace Login
+    # 3. HuggingFace Login (skip for pure classifier-only mode unless forced)
     token_file = os.path.join("src", "resources", "API_Keys.txt")
+    hf_token = None
     if os.path.exists(token_file):
         try:
             with open(token_file, 'r') as f:
                 hf_token = f.readline().split('=')[1].strip('"')
+        except Exception as e:
+            print(f"Failed to read HF token: {e}")
+    
+    require_login = experiment_config.get('force_hf_login', False) or experiment_mode != EXPERIMENT_NO_PRETRAIN
+    if hf_token and require_login:
+        try:
             login(token=str(hf_token))
             print("HuggingFace login successful.")
         except Exception as e:
-            print(f"Failed to read or login with HF token: {e}")
+            print(f"Failed to login to HuggingFace: {e}")
+    elif require_login:
+        print("No HuggingFace token available but login required for this mode.")
+    else:
+        print("Skipping HuggingFace login for classifier-only experiment.")
     
-    model, tokenizer = load_LoRA_model(config)
+    model, tokenizer = load_model_for_mode(config, experiment_mode)
     
     # 5. Wrap model with classification head
     print("\n" + "=" * 80)
     print("Creating LLM Classifier wrapper...")
     print("=" * 80)
     
+    multi_label_task = bool(training_config.get('multi_label', False))
+    if multi_label_task:
+        print("Multi-label flag detected. Ensure datasets/collators emit multi-hot labels. Current metrics remain binary.")
+    
+    train_lora_adapters = bool(model_config.get('train_lora', False))
+    if 'freeze_lora' in model_config:
+        train_lora_adapters = not bool(model_config['freeze_lora'])
+    if experiment_mode == EXPERIMENT_PRETRAIN_CLASSIFIER_LORA:
+        train_lora_adapters = True
+    
+    freeze_llm = bool(model_config.get('freeze_llm', True))
+    
+    trainable_keywords = ["lora_"] if train_lora_adapters else None
+    
     classifier_model = LLMClassifier(
         base_model=model,
         hidden_size=model_config['hidden_size'],
         num_labels=model_config['num_labels'],
-        freeze_base=model_config.get('freeze_llm', True)
+        freeze_base=freeze_llm,
+        trainable_param_keywords=trainable_keywords,
+        multi_label=multi_label_task
     )
     
     # 6. Load Datasets
@@ -103,10 +171,24 @@ def main(config_path: str):
         sample = train_dataset[i]
         if sample is not None:
             text_preview = sample['text'][-500:] if len(sample['text']) > 500 else sample['text']
-            label = sample['label'].item()
-            binary_label = 1 if label > 0 else 0
+            label_tensor = sample['label']
+            scalar_label = None
+            label_value = None
+            if torch.is_tensor(label_tensor):
+                if label_tensor.dim() == 0:
+                    scalar_label = label_tensor.item()
+                    label_value = scalar_label
+                else:
+                    label_value = label_tensor.tolist()
+            else:
+                scalar_label = label_tensor
+                label_value = scalar_label
+            
+            if label_value is None:
+                label_value = label_tensor
+            binary_label = 1 if (scalar_label is not None and scalar_label > 0) else label_value
             print(f"\nPatient {i}:")
-            print(f"  Label: {label} (binary: {binary_label})")
+            print(f"  Label: {label_value} (binary view: {binary_label})")
             print(f"  Text: ...{text_preview}")
     
     # 7. Create Data Collator
@@ -114,13 +196,14 @@ def main(config_path: str):
     print("Creating data collator...")
     print("=" * 80)
     
+    binary_classification = not multi_label_task
     collate_fn = ClassificationCollator(
         tokenizer=tokenizer,
         max_length=data_config['max_length'],
-        binary_classification=True
+        binary_classification=binary_classification
     )
     print(f"  - Max sequence length: {data_config['max_length']}")
-    print(f"  - Binary classification: True")
+    print(f"  - Binary classification: {binary_classification}")
     
     # 8. Train
     print("\n" + "=" * 80)

@@ -31,18 +31,38 @@ class LLMClassifier(nn.Module):
         hidden_size: Hidden dimension of the LLM
         num_labels: Number of output classes (2 for binary classification)
         freeze_base: Whether to freeze the base LLM parameters
+        trainable_param_keywords: Optional substrings for parameters that should remain trainable
+        multi_label: If True, uses BCE loss (future multi-label support)
     """
     
-    def __init__(self, base_model, hidden_size: int, num_labels: int = 2, freeze_base: bool = True):
+    def __init__(
+        self,
+        base_model,
+        hidden_size: int,
+        num_labels: int = 2,
+        freeze_base: bool = True,
+        trainable_param_keywords=None,
+        multi_label: bool = False,
+    ):
         super().__init__()
         self.base_model = base_model
         self.num_labels = num_labels
+        self.multi_label = multi_label
+        self.trainable_param_keywords = trainable_param_keywords or []
         
         # Freeze base model if requested
         if freeze_base:
             for param in self.base_model.parameters():
                 param.requires_grad = False
             print("  - Froze all base model parameters")
+        
+        if self.trainable_param_keywords:
+            reenabled = 0
+            for name, param in self.base_model.named_parameters():
+                if any(keyword in name for keyword in self.trainable_param_keywords):
+                    param.requires_grad = True
+                    reenabled += 1
+            print(f"  - Re-enabled {reenabled} parameters matching: {self.trainable_param_keywords}")
         
         # Classification head: hidden_size -> num_labels
         self.classifier = nn.Linear(hidden_size, num_labels)
@@ -92,8 +112,12 @@ class LLMClassifier(nn.Module):
         # Calculate loss if labels are provided
         loss = None
         if labels is not None:
-            loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(logits, labels)
+            if self.multi_label:
+                loss_fct = nn.BCEWithLogitsLoss()
+                loss = loss_fct(logits, labels.float())
+            else:
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(logits, labels)
         
         return {
             'loss': loss,
@@ -186,6 +210,10 @@ def run_classification_training(
     training_config = config['training']
     model_config = config['model']
     wandb_config = config.get('wandb', {})
+    multi_label_task = bool(training_config.get('multi_label', False))
+    
+    if multi_label_task:
+        print("Multi-label training mode is flagged, but metrics/plots currently assume binary classification.")
     
     # Print trainable parameters
     model.print_trainable_parameters()
@@ -268,15 +296,21 @@ def run_classification_training(
     # 2. Convert logits to probabilities
     logits = pred_output.predictions
     
-    # We take column 1 because that is the probability of "Cancer"
-    probs = torch.softmax(torch.tensor(logits), dim=1).numpy()[:, 1]
+    if multi_label_task:
+        probs = torch.sigmoid(torch.tensor(logits)).numpy()
+    else:
+        # We take column 1 because that is the probability of "Cancer"
+        probs = torch.softmax(torch.tensor(logits), dim=1).numpy()[:, 1]
     labels = pred_output.label_ids
     
     # 3. Create the folder for plots
     plot_output_dir = os.path.join(training_config['output_dir'], "plots")
     
     # 4. Call your helper function to draw the graphs
-    plot_classification_performance(labels, probs, plot_output_dir)
+    if multi_label_task:
+        print("Skipping ROC/PR plots for multi-label configuration (not yet supported).")
+    else:
+        plot_classification_performance(labels, probs, plot_output_dir)
     
     return trainer, eval_results
 

@@ -225,6 +225,7 @@ def main(config_path: str):
         report_to = "none"
     
     token_file = os.path.join("src", "resources", "API_Keys.txt")
+    hf_token = None
     if os.path.exists(token_file):
         try:
             with open(token_file, 'r') as f:
@@ -239,7 +240,10 @@ def main(config_path: str):
     
     print(f"Run name: {run_name}")
     
-    login(token=str(hf_token))
+    if hf_token:
+        login(token=str(hf_token))
+    else:
+        print("No HuggingFace token provided - skipping login.")
 
     # 3. Load Model with Unsloth
     print("\n" + "=" * 80)
@@ -398,11 +402,13 @@ def main(config_path: str):
     print("Saving final model...")
     print("=" * 80)
     
-    final_model_path = os.path.join(training_config['output_dir'], "final_model")
+    final_subdir = training_config.get('final_subdir', "final_model")
+    final_model_path = os.path.join(training_config['output_dir'], final_subdir)
+    os.makedirs(final_model_path, exist_ok=True)
     trainer.save_model(final_model_path)
-    # tokenizer.save_pretrained(final_model_path)
+    tokenizer.save_pretrained(final_model_path)
     
-    print(f"  - Model saved to: {final_model_path}")
+    print(f"  - Model + tokenizer saved to: {final_model_path}")
     
     # 12. Final Evaluation
     if val_dataset:
