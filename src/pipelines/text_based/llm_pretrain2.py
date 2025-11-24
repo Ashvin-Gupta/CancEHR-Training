@@ -376,6 +376,10 @@ def main(config_path: str):
         # Reporting
         report_to=report_to,
         run_name=run_name,
+
+        # DDP crash fix
+        ddp_find_unused_parameters=False,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         
         # Other
         remove_unused_columns=False,
