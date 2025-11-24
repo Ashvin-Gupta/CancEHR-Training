@@ -214,18 +214,30 @@ def main(config_path: str):
     )
     print(default_run_name)
 
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+
     if wandb_config.get('enabled', False):
         os.environ["WANDB_PROJECT"] = wandb_config.get("project", "ehr-llm-pretraining")
         run_name = wandb_config.get("run_name", default_run_name)
         report_to = "wandb"
+
+        if local_rank == 0:
+            os.environ["WANDB_PROJECT"] = wandb_config.get("project", "ehr-llm-pretraining")
+            
+            wandb.init(
+                project=wandb_config.get("project", "ehr-llm-pretraining"), 
+                config=config, 
+                name=run_name
+            )
+            wandb.config.update(config, allow_val_change=True)
         
-        wandb.init(
-            project=wandb_config.get("project", "ehr-llm-pretraining"), 
-            config=config, # Pass entire YAML as defaults
-            name=run_name
-        )
-        # Update wandb config with the full config
-        wandb.config.update(config, allow_val_change=True)
+        # wandb.init(
+        #     project=wandb_config.get("project", "ehr-llm-pretraining"), 
+        #     config=config, # Pass entire YAML as defaults
+        #     name=run_name
+        # )
+        # # Update wandb config with the full config
+        # wandb.config.update(config, allow_val_change=True)
     else:
         run_name = default_run_name
         report_to = "none"
