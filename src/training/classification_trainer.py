@@ -49,6 +49,10 @@ class LLMClassifier(nn.Module):
         self.num_labels = num_labels
         self.multi_label = multi_label
         self.trainable_param_keywords = trainable_param_keywords or []
+
+        if hasattr(self.base_model, "gradient_checkpointing_enable"):
+            print("  - Enabling gradient checkpointing for base model")
+            self.base_model.gradient_checkpointing_enable()
         
         # Freeze base model if requested
         if freeze_base:
@@ -236,6 +240,7 @@ def run_classification_training(
         
         # Gradient settings
         gradient_accumulation_steps=int(training_config.get('gradient_accumulation_steps', 1)),
+        gradient_checkpointing=True,
         
         # Precision
         fp16=bool(training_config.get('fp16', False)),
