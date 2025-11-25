@@ -8,7 +8,7 @@ experiment:
 
 model:
   unsloth_model: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
-  pretrained_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test/checkpoint-5000"
+  pretrained_checkpoint: "/data/scratch/qc25022/pancreas/experiments/Pretrain-Qwen3-8B-Pancreas/checkpoint-4915"
   hidden_size: 4096
   num_labels: 2
   freeze_llm: true
@@ -16,10 +16,11 @@ model:
 
 wandb:
   enabled: true
-  project: "llm-classification-finetune"
+  project: "Pretrain-Qwen3-8B-Pancreas-classification-logisitc"
+  run_name: "pretrained-6-month-pretrain-logistic"
 
 training:
-  output_dir: "/data/scratch/qc25022/pancreas/experiments/llm_classifier_Qwen3-8B"
+  output_dir: "/data/scratch/qc25022/pancreas/experiments/pretrained-6-month-logistic"
   overwrite_output_dir: true
   epochs: 20
   batch_size: 8
@@ -36,6 +37,8 @@ training:
   save_total_limit: 2
   load_in_4bit: true
   multi_label: false
+  early_stopping_patience: 5
+  early_stopping_threshold: 0.001
 
 data:
   cutoff_months: 6

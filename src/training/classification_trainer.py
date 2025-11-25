@@ -17,6 +17,7 @@ from src.evaluations.visualisation import plot_classification_performance
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Dict, Any
+from transformers import EarlyStoppingCallback
 
 
 class LLMClassifier(nn.Module):
@@ -282,6 +283,15 @@ def run_classification_training(
     
     # Create trainer
     print("\nInitializing Trainer...")
+    callbacks = []
+    early_stopping_patience = training_config.get('early_stopping_patience', None)
+    if early_stopping_patience is not None:
+        callbacks.append(EarlyStoppingCallback(
+            early_stopping_patience=early_stopping_patience,
+            early_stopping_threshold=training_config.get('early_stopping_threshold', 0.0)
+        ))
+        print(f"  - Early stopping enabled with patience={early_stopping_patience}")
+
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -290,6 +300,7 @@ def run_classification_training(
         tokenizer=tokenizer,
         data_collator=collate_fn,
         compute_metrics=compute_metrics,
+        callbacks=callbacks,
     )
     
     # Train
