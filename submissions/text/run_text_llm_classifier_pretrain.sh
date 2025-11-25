@@ -1,13 +1,14 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 8
-#$ -l h_rt=1:0:0
-#$ -l h_vmem=11G
+#$ -pe smp 12
+#$ -l h_rt=240:0:0
+#$ -l h_vmem=7.5G
 #$ -l gpu=1
 #$ -l gpu_type=ampere
+#$ -l cluster=andrena
 #$ -j n
-#$ -o /data/home/qc25022/CancEHR-Training/HPC_New/logo/
-#$ -e /data/home/qc25022/CancEHR-Training/HPC_New/loge/
+#$ -o /data/home/qc25022/CancEHR-Training/HPC_Pretrain/logo/
+#$ -e /data/home/qc25022/CancEHR-Training/HPC_Pretrain/loge/
 
 set -e 
 
@@ -24,7 +25,7 @@ source /data/home/qc25022/CancEHR-Training/venv/bin/activate
 # Change to the base directory before running the python command
 cd "${BASE_DIR}"
 
-echo "Starting experiment from directory: $(pwd)"
+echo "Starting experiment from directory: $(pwd) Pretrain no Lora"
 
 # # Run the fine-tuning script
 python -m src.pipelines.text_based.finetune_llm_classifier \

@@ -83,14 +83,17 @@ def main(config_path: str):
     
     # 2. Set up WandB
     if wandb_config.get('enabled', False):
-        os.environ["WANDB_PROJECT"] = wandb_config.get("project", "llm-classification")
         run_name = wandb_config.get("run_name")
         if run_name is None:
             # Auto-generate run name
             run_name = f"classifier_{config.get('name', 'default')}"
-        wandb_config['run_name'] = run_name
-        # Update wandb config with the full config
-        wandb.config.update(config, allow_val_change=True)
+        
+        # Initialize wandb run
+        wandb.init(
+            project=wandb_config.get("project", "llm-classification"),
+            name=run_name,
+            config=config
+        )
         print(f"\nWandB enabled - Project: {wandb_config['project']}, Run: {run_name}")
     
     # 3. HuggingFace Login (skip for pure classifier-only mode unless forced)

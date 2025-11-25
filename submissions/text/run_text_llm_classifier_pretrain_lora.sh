@@ -25,7 +25,7 @@ source /data/home/qc25022/CancEHR-Training/venv/bin/activate
 # Change to the base directory before running the python command
 cd "${BASE_DIR}"
 
-echo "Starting experiment from directory: $(pwd)"
+echo "Starting experiment from directory: $(pwd) Pretrain with Lora"
 
 # # Run the fine-tuning script
 python -m src.pipelines.text_based.finetune_llm_classifier \
