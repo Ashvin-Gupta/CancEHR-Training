@@ -18,10 +18,10 @@ model:
 wandb:
   enabled: true
   project: "Pretrain-Qwen3-8B-Pancreas-classification-logisitc"
-  run_name: "lora-6-month-logistic"
+  run_name: "lora-12-month-logistic"
 
 training:
-  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-6-month-logistic"
+  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-12-month-logistic"
   overwrite_output_dir: true
   epochs: 20
   batch_size: 8
@@ -42,7 +42,7 @@ training:
   early_stopping_threshold: 0.001
 
 data:
-  cutoff_months: 6
+  cutoff_months: 12
   data_dir: "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi/"
   vocab_filepath: "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi/vocab.csv"
   labels_filepath: "/data/scratch/qc25022/upgi/master_subject_labels.csv"
