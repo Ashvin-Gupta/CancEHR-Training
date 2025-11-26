@@ -1,9 +1,8 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 8
+#$ -pe smp 1
 #$ -l h_rt=1:0:0
 #$ -l h_vmem=4G
-#$ -l gpu=1
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_New/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_New/loge/
@@ -25,7 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.pipelines.text_based.token_adaptation
+python -m src.data.unified_dataloader
 
 echo "Pipeline finished."
 deactivate

@@ -80,11 +80,11 @@ if __name__ == '__main__':
     # --- 1. Create a dummy config for testing ---
     # IMPORTANT: Update these paths to your actual file locations
     test_config = {
-        "format": "tokens",
+        "format": "text",
         "batch_size": 4,
         "num_workers": 0, # Use 0 for simple debugging
         "cutoff_months": 6,
-        "data_dir":'/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test',
+        "data_dir":'/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi',
         "vocab_filepath": "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv",
         "labels_filepath": "/data/scratch/qc25022/upgi/master_subject_labels.csv",
         "medical_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv",
@@ -138,7 +138,7 @@ if __name__ == '__main__':
     for cutoff in cutoff_values:
         print(f"\n  Testing with cutoff_months={cutoff}:")
         test_config['cutoff_months'] = cutoff
-        test_config['format'] = 'tokens'
+        test_config['format'] = 'text'
         
         # Create dataset directly to inspect individual samples
         dataset = UnifiedEHRDataset(
@@ -147,8 +147,10 @@ if __name__ == '__main__':
             labels_file=test_config["labels_filepath"],
             medical_lookup_file=test_config["medical_lookup_filepath"],
             lab_lookup_file=test_config["lab_lookup_filepath"],
+            region_lookup_file=test_config["region_lookup_filepath"],
+            time_lookup_file=test_config["time_lookup_filepath"],
             cutoff_months=cutoff,
-            format='tokens',
+            format='text',
             split='train'
         )
         
@@ -170,22 +172,26 @@ if __name__ == '__main__':
         
         if cancer_idx is not None:
             cancer_sample = dataset[cancer_idx]
-            cancer_length = len(cancer_sample['tokens'])
+            cancer_text = cancer_sample['text']
+            cancer_length = len(cancer_text)
             cancer_label = cancer_sample['label'].item()
-            print(f"    Cancer case (idx={cancer_idx}, label={cancer_label}): sequence length = {cancer_length}")
+            print(f"    Cancer case (idx={cancer_idx}, label={cancer_label}): text length = {cancer_length} characters")
+            print(f"      Preview: {cancer_text[:200]}...")
         else:
             print(f"    No cancer case found in first 100 samples")
         
         if control_idx is not None:
             control_sample = dataset[control_idx]
-            control_length = len(control_sample['tokens'])
-            print(f"    Control case (idx={control_idx}): sequence length = {control_length}")
+            control_text = control_sample['text']
+            control_length = len(control_text)
+            print(f"    Control case (idx={control_idx}): text length = {control_length} characters")
+            print(f"      Preview: {control_text[:200]}...")
         else:
             print(f"    No control case found in first 100 samples")
     
     print("\n  Expected behavior:")
-    print("    - Cancer cases should have DECREASING sequence lengths as cutoff_months INCREASES")
-    print("    - Control cases should have SAME sequence length regardless of cutoff_months")
+    print("    - Cancer cases should have DECREASING text lengths as cutoff_months INCREASES")
+    print("    - Control cases should have SAME text length regardless of cutoff_months")
     print("    - cutoff_months=None should show the full timeline")
 
     print("\n--- Verification Script Finished ---")
