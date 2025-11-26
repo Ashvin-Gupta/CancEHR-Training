@@ -91,8 +91,8 @@ if __name__ == '__main__':
         "labels_filepath": "/data/scratch/qc25022/upgi/master_subject_labels.csv",
         "medical_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv",
         "lab_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv",
-        "region_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/RegionLookUp.csv",
-        "time_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/TimeLookUp.csv"
+        "region_lookup_filepath": "/data/home/qc25022/CancEHR-Training/src/resources/RegionLookUp.csv",
+        "time_lookup_filepath": "/data/home/qc25022/CancEHR-Training/src/resources/TimeLookUp.csv"
     }
 
     # --- 2. Test the 'tokens' format ---
