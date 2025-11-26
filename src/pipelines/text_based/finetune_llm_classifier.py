@@ -169,10 +169,11 @@ def main(config_path: str):
     
     train_dataset = UnifiedEHRDataset(split="train", **dataset_args)
     val_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
-    
+    test_dataset = UnifiedEHRDataset(split="held_out", **dataset_args)
+
     print(f"  - Train dataset: {len(train_dataset)} patients")
     print(f"  - Validation dataset: {len(val_dataset)} patients")
-    
+    print(f"  - Test dataset: {len(test_dataset)} patients")
     # Print a few examples
     print("\n" + "=" * 80)
     print("Sample data (last 500 chars):")
@@ -226,6 +227,7 @@ def main(config_path: str):
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
+        test_dataset=test_dataset,
         collate_fn=collate_fn
     )
     

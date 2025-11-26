@@ -58,10 +58,6 @@ def main(config_path: str):
     else:
         raise FileNotFoundError(f"Could not find model weights in {finetuned_checkpoint}")
         
-    # Load the state dict into the model
-    # strict=False is sometimes needed if the base model has extra buffers, 
-    # but for a full save, strict=True (default) is better to catch mismatches.
-    # If you get errors about missing keys in 'base_model', try strict=False.
     model.load_state_dict(state_dict, strict=False) 
     print("✓ Classifier weights loaded successfully.")
 
@@ -81,6 +77,7 @@ def main(config_path: str):
         "tokenizer": None    
     }   
     val_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
+    test_dataset = UnifiedEHRDataset(split="held_out", **dataset_args)
     
     # 6. Create Collator
     collate_fn = ClassificationCollator(
@@ -107,38 +104,43 @@ def main(config_path: str):
         compute_metrics=compute_metrics,
     )
     
-    # 8. Run Prediction
+    # 8. Run Prediction on Validation Set
     print("\nRunning prediction on validation set...")
     pred_output = trainer.predict(val_dataset)
     
     # Print Metrics
-    print("\nStandard Metrics:")
+    print("\nValidation Set Metrics:")
     for key, val in pred_output.metrics.items():
         print(f"{key}: {val:.4f}")
         
-    # 9. Generate Plots
-    print("\nGenerating PR and ROC curves...")
+    # 9. Generate Plots for Validation Set
+    print("\nGenerating PR and ROC curves for validation set...")
     predictions = pred_output.predictions
-    print(f"Predictions type: {type(predictions)}")
-    if isinstance(predictions, tuple):
-        print(f"Predictions is a tuple with {len(predictions)} elements")
-        for i, pred in enumerate(predictions):
-            print(f"Element {i} shape: {pred.shape}")
-    else:
-        print(f"Predictions shape: {predictions.shape}")
-    
-    # Check if predictions is a tuple (which happens because your model returns hidden_states too)
-    if isinstance(predictions, tuple):
-        # The first element is the logits [Batch, 2]
-        # The second element is hidden_states [Batch, 4096]
-        logits = predictions[0] 
-    else:
-        logits = predictions
+    logits = predictions[0]
     labels = pred_output.label_ids
     probs = torch.softmax(torch.tensor(logits), dim=1).numpy()[:, 1]
     
-    plot_dir = os.path.join(finetuned_checkpoint, "evaluation_plots")
+    plot_dir = os.path.join(finetuned_checkpoint, "evaluation_plots_validation")
     plot_classification_performance(labels, probs, plot_dir)
+    
+    # 10. Run Prediction on Test Set
+    print("\nRunning prediction on test set...")
+    test_pred_output = trainer.predict(test_dataset)
+    
+    # Print Metrics
+    print("\nTest Set Metrics:")
+    for key, val in test_pred_output.metrics.items():
+        print(f"{key}: {val:.4f}")
+        
+    # 11. Generate Plots for Test Set
+    print("\nGenerating PR and ROC curves for test set...")
+    test_predictions = test_pred_output.predictions
+    test_logits = test_predictions[0]
+    test_labels = test_pred_output.label_ids
+    test_probs = torch.softmax(torch.tensor(test_logits), dim=1).numpy()[:, 1]
+    
+    test_plot_dir = os.path.join(finetuned_checkpoint, "evaluation_plots_test")
+    plot_classification_performance(test_labels, test_probs, test_plot_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

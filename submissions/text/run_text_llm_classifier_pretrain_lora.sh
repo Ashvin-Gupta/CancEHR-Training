@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -cwd                 
 #$ -pe smp 12
-#$ -l h_rt=240:0:0
+#$ -l h_rt=1:0:0
 #$ -l h_vmem=7.5G
 #$ -l gpu=1
 #$ -l gpu_type=ampere
@@ -28,14 +28,14 @@ cd "${BASE_DIR}"
 echo "Starting experiment from directory: $(pwd) Pretrain with Lora"
 
 # # Run the fine-tuning script
-python -m src.pipelines.text_based.finetune_llm_classifier \
---config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls_lora.yaml #pretrained, classifier + lora
+# python -m src.pipelines.text_based.finetune_llm_classifier \
+# --config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls_lora.yaml #pretrained, classifier + lora
 # --config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls.yaml #pretrained, only classifier
    # --config_filepath src/pipelines/text_based/configs/llm_classify_no_pretrain.yaml #no pretrain, only classifier
    
 
 # Run the evaluation script
-# python -m src.pipelines.text_based.evaluate_checkpoint_classifier \
-#    --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
+python -m src.pipelines.text_based.evaluate_checkpoint_classifier \
+   --config_filepath src/pipelines/text_based/configs/llm_finetune_classifier.yaml
 
 echo "Classification fine-tuning complete!"

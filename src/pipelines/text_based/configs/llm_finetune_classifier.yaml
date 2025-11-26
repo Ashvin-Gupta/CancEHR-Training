@@ -6,46 +6,47 @@ model:
   # Path to the pretrained checkpoint from continued pretraining
   # This should contain the LoRA adapters and extended tokenizer
   unsloth_model: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
-  pretrained_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_pretrain_Qwen3-8B_test/checkpoint-3000"
-  finetune_checkpoint: "/data/scratch/qc25022/gallbladder/experiments/llm_classifier_Qwen3-8B/checkpoint-11000"
+  pretrained_checkpoint: "/data/scratch/qc25022/pancreas/experiments/Pretrain-Qwen3-8B-Pancreas/checkpoint-4915"
+  finetune_checkpoint: "/data/scratch/qc25022/pancreas/experiments/lora-6-month-logistic/checkpoint-2000"
   
   # Model architecture settings
   hidden_size: 4096  # Qwen3-8B hidden dimension (check your model config if different)
   num_labels: 2  # Binary classification: 0 = Control, 1 = Cancer
   
-  # Freezing strategy
-  freeze_llm: true  # Freeze base LLM parameters
-  freeze_lora: true  # Freeze LoRA adapters (set to false for joint training)
+  # # Freezing strategy
+  # freeze_llm: true  # Freeze base LLM parameters
+  # freeze_lora: true  # Freeze LoRA adapters (set to false for joint training)
 
-wandb:
-  enabled: true
-  project: "llm-classification-finetune"
+# wandb:
+#   enabled: true
+#   project: "Pretrain-Qwen3-8B-Pancreas-classification-logisitc"
+#   run_name: "lora-6-month-logistic-eval-test"
   # run_name: null  # Will be auto-generated
 
 training:
-  output_dir: "/data/scratch/qc25022/gallbladder/experiments/llm_classifier_Qwen3-8B"
+  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-6-month-logistic"
   overwrite_output_dir: true
   
-  # Training hyperparameters
-  epochs: 20
-  batch_size: 8
-  eval_batch_size: 12
-  learning_rate: 1e-5
-  weight_decay: 0.01
-  warmup_steps: 100
+  # # Training hyperparameters
+  # epochs: 20
+  # batch_size: 8
+  # eval_batch_size: 12
+  # learning_rate: 1e-5
+  # weight_decay: 0.01
+  # warmup_steps: 100
   
-  # Gradient settings
-  gradient_accumulation_steps: 2  # Effective batch size = 16
+  # # Gradient settings
+  # gradient_accumulation_steps: 2  # Effective batch size = 16
   
   # Precision
   fp16: false
   bf16: true  # Use BF16 for Ampere GPUs
   
   # Logging and saving
-  logging_steps: 50
-  eval_steps: 250
-  save_steps: 500
-  save_total_limit: 2  # Keep only 2 best checkpoints
+  # logging_steps: 50
+  # eval_steps: 250
+  # save_steps: 500
+  # save_total_limit: 2  # Keep only 2 best checkpoints
   
   # 4-bit loading (should match pretraining config)
   load_in_4bit: true

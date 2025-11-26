@@ -218,6 +218,7 @@ def run_classification_training(
     tokenizer,
     train_dataset,
     val_dataset,
+    test_dataset,
     collate_fn
 ):
     """
@@ -229,6 +230,7 @@ def run_classification_training(
         tokenizer: Tokenizer (for saving with model)
         train_dataset: Training dataset
         val_dataset: Validation dataset
+        test_dataset: Test dataset
         collate_fn: Data collator function
     """
     training_config = config['training']
@@ -291,7 +293,7 @@ def run_classification_training(
             early_stopping_threshold=training_config.get('early_stopping_threshold', 0.0)
         ))
         print(f"  - Early stopping enabled with patience={early_stopping_patience}")
-
+        
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -314,22 +316,22 @@ def run_classification_training(
     trainer.save_model(final_model_path)
     print(f"  - Model saved to: {final_model_path}")
     
-    # Run final evaluation
-    print("\nRunning final evaluation...")
+    # Run final evaluation on validation set
+    print("\nRunning final evaluation on validation set...")
     eval_results = trainer.evaluate()
-    print("\nFinal Evaluation Results:")
+    print("\nFinal Validation Results:")
     print("="*80)
     for key, value in eval_results.items():
         print(f"  {key}: {value:.4f}")
     print("="*80)
 
-    print("\nGenerating detailed ROC and Precision-Recall curves...")
+    print("\nGenerating detailed ROC and Precision-Recall curves for validation set...")
     
     # 1. Get raw predictions (logits) for every patient in validation set, evaluate() only gives averages; predict() gives the actual scores
     pred_output = trainer.predict(val_dataset)
     
     # 2. Convert logits to probabilities
-    logits = pred_output.predictions
+    logits = pred_output.predictions[0]
     
     if multi_label_task:
         probs = torch.sigmoid(torch.tensor(logits)).numpy()
@@ -339,13 +341,45 @@ def run_classification_training(
     labels = pred_output.label_ids
     
     # 3. Create the folder for plots
-    plot_output_dir = os.path.join(training_config['output_dir'], "plots")
+    plot_output_dir = os.path.join(training_config['output_dir'], "plots_validation")
     
     # 4. Call your helper function to draw the graphs
     if multi_label_task:
         print("Skipping ROC/PR plots for multi-label configuration (not yet supported).")
     else:
         plot_classification_performance(labels, probs, plot_output_dir)
+    
+    # Run evaluation on test set
+    print("\nRunning evaluation on test set...")
+    test_results = trainer.evaluate(test_dataset, metric_key_prefix="test")
+    print("\nFinal Test Results:")
+    print("="*80)
+    for key, value in test_results.items():
+        print(f"  {key}: {value:.4f}")
+    print("="*80)
+    
+    print("\nGenerating detailed ROC and Precision-Recall curves for test set...")
+    
+    # Get predictions for test set
+    test_pred_output = trainer.predict(test_dataset)
+    
+    # Convert logits to probabilities
+    test_logits = test_pred_output.predictions[0]
+    
+    if multi_label_task:
+        test_probs = torch.sigmoid(torch.tensor(test_logits)).numpy()
+    else:
+        test_probs = torch.softmax(torch.tensor(test_logits), dim=1).numpy()[:, 1]
+    test_labels = test_pred_output.label_ids
+    
+    # Create the folder for test plots
+    test_plot_output_dir = os.path.join(training_config['output_dir'], "plots_test")
+    
+    # Generate test set plots
+    if multi_label_task:
+        print("Skipping ROC/PR plots for multi-label configuration (not yet supported).")
+    else:
+        plot_classification_performance(test_labels, test_probs, test_plot_output_dir)
     
     return trainer, eval_results
 
