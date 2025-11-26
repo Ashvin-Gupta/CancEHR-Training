@@ -55,6 +55,8 @@ def get_dataloader(config: dict, split: str) -> DataLoader:
         medical_lookup_file=config["medical_lookup_filepath"],
         lab_lookup_file=config["lab_lookup_filepath"],
         cutoff_months=config.get("cutoff_months"),
+        region_lookup_file=config["region_lookup_filepath"],
+        time_lookup_file=config["time_lookup_filepath"],
         format=config.get("format", "tokens"),
         split=split
     )
@@ -88,7 +90,9 @@ if __name__ == '__main__':
         "vocab_filepath": "/data/scratch/qc25022/upgi/tokenised_data_debug/cprd_test/vocab.csv",
         "labels_filepath": "/data/scratch/qc25022/upgi/master_subject_labels.csv",
         "medical_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/MedicalDictTranslation.csv",
-        "lab_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv"
+        "lab_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/LabLookUP.csv",
+        "region_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/RegionLookUp.csv",
+        "time_lookup_filepath": "/data/home/qc25022/cancer-extraction-pipeline/src/resources/TimeLookUp.csv"
     }
 
     # --- 2. Test the 'tokens' format ---
