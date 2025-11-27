@@ -11,10 +11,11 @@ from src.data.classification_collator import ClassificationCollator
 from src.training.classification_trainer import LLMClassifier, compute_metrics
 from src.evaluations.visualisation import plot_classification_performance
 from src.training.utils import load_LoRA_model
-
+from src.training.utils import seed_all
 def main(config_path: str):
     
-    
+    # Set seed
+    seed_all(42)
     # 1. Load Configuration
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)

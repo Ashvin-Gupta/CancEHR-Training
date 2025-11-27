@@ -3,8 +3,19 @@ from unsloth import FastLanguageModel
 from transformers import AutoTokenizer
 import yaml
 import math
+import random
+import numpy as np
+import torch
+from transformers import set_seed as hf_set_seed
 from torch.optim.lr_scheduler import LambdaLR
 
+
+def seed_all(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    hf_set_seed(seed)
 
 def get_nested_value(data: dict, key: str):
     """

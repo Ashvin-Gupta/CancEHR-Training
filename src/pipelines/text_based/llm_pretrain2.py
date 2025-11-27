@@ -42,6 +42,8 @@ from huggingface_hub import login
 from src.data.unified_dataset import UnifiedEHRDataset
 from src.pipelines.text_based.token_adaption2 import EHRTokenExtensionStaticTokenizer
 
+from src.training.utils import seed_all
+
 # Custom callback to run inference after each epoch
 from transformers import TrainerCallback
 
@@ -175,6 +177,8 @@ def main(config_path: str):
     Args:
         config_path: Path to YAML configuration file
     """
+    # Set seed
+    seed_all(42)
     # 1. Load Config
     print("=" * 80)
     print("LLM Continued Pretraining")

@@ -20,6 +20,7 @@ from src.data.classification_collator import ClassificationCollator
 from src.training.classification_trainer import LLMClassifier, run_classification_training
 from src.training.utils import load_LoRA_model
 from src.pipelines.text_based.token_adaption2 import EHRTokenExtensionStaticTokenizer
+from src.training.utils import seed_all
 
 EXPERIMENT_NO_PRETRAIN = "no_pretrain"
 EXPERIMENT_PRETRAIN_ONLY_CLASSIFIER = "pretrained_cls"
@@ -55,6 +56,8 @@ def load_model_for_mode(config: dict, experiment_mode: str):
 
 
 def main(config_path: str):
+    # Set seed
+    seed_all(42)
     print("=" * 80)
     print("LLM Binary Classification Fine-tuning")
     print("=" * 80)
