@@ -13,7 +13,9 @@ src/resources/API_Keys.txt
 HPC_Files/
 HPC_New/
 HPC_pretrain/
+HPC_Pretrain/
 HPC_classify/
+results/
 # Wandb
 wandb/
 

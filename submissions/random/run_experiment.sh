@@ -1,8 +1,9 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 1
+#$ -pe smp 8
 #$ -l h_rt=1:0:0
-#$ -l h_vmem=4G
+#$ -l h_vmem=11G
+#$ -l gpu=1
 #$ -j n
 #$ -o /data/home/qc25022/CancEHR-Training/HPC_New/logo/
 #$ -e /data/home/qc25022/CancEHR-Training/HPC_New/loge/
@@ -24,7 +25,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.data.unified_dataloader
+python -m src.resources.trajectory_lengths
 
 echo "Pipeline finished."
 deactivate
