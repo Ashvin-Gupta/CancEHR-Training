@@ -207,6 +207,7 @@ def main(config_path: str):
         f"_bs{training_config['batch_size']}"
         f"_wd{training_config['weight_decay']}"
         f"_ga{training_config['gradient_accumulation_steps']}"
+        f"_length{model_config['max_length']}"
         f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     )
     print(default_run_name)

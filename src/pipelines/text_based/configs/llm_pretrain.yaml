@@ -6,7 +6,7 @@ model:
   # Model to pretrain (examples: gpt2, meta-llama/Llama-2-7b-hf, mistralai/Mistral-7B-v0.1, unsloth/llama-3-8b-bnb-4bit, unsloth/Qwen3-8B-Base-unsloth-bnb-4bit)
   model_name: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
   base_model_name: "Qwen/Qwen3-8B"
-  max_length: 2048  # Context window for sequence packing
+  max_length: 8192  # Context window for sequence packing
   hf_token: null 
 
 wandb:
@@ -35,7 +35,7 @@ training:
   warmup_steps: 500
   
   # Gradient settings
-  gradient_accumulation_steps: 4  # Effective batch size = gradient_accumulation_steps * batch_size
+  gradient_accumulation_steps: 1  # Effective batch size = gradient_accumulation_steps * batch_size
   gradient_checkpointing: false  # Set to true for large models to save memory
   
   # Precision
