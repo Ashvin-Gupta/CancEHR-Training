@@ -23,8 +23,8 @@ training:
   output_dir: "/data/scratch/qc25022/pancreas/experiments/no-pretrain-12-month-logistic-8192"
   overwrite_output_dir: true
   epochs: 20
-  batch_size: 8
-  eval_batch_size: 12
+  batch_size: 4
+  eval_batch_size: 4
   learning_rate: 1e-5
   weight_decay: 0.01
   warmup_steps: 100
