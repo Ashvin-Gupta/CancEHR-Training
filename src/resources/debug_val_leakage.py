@@ -25,7 +25,7 @@ def check_val_leakage():
         lab_lookup_file=CONFIG_PATHS['lab'],
         region_lookup_file=CONFIG_PATHS['region'],
         time_lookup_file=CONFIG_PATHS['time'],
-        cutoff_months=12,  # Your classification cutoff
+        cutoff_months=6,  # Your classification cutoff
         format='text',
         split='tuning'     # CHECK THE VALIDATION SET
     )

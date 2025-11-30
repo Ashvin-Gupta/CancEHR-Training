@@ -24,7 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.resources.debug_val_leakage
+python -m src.resources.analyze_trajectory_lengths
 
 echo "Pipeline finished."
 deactivate
