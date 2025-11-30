@@ -24,7 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.resources.analyze_trajectory_lengths
+python -m src.resources.check_concept_drift
 
 echo "Pipeline finished."
 deactivate
