@@ -35,7 +35,7 @@ def print_stats(name, data):
 def analyze_trajectory_lengths():
     print(f"{'='*80}")
     print(f"TRAJECTORY LENGTH ANALYSIS (Cases vs Controls)")
-    print(f"Cutoff: 12 Months (for Cases)")
+    print(f"Cutoff: 6 Months (for Cases)")
     print(f"{'='*80}")
     
     splits = ['train', 'tuning', 'held_out']
@@ -54,7 +54,7 @@ def analyze_trajectory_lengths():
                 lab_lookup_file=CONFIG_PATHS['lab'],
                 region_lookup_file=CONFIG_PATHS['region'],
                 time_lookup_file=CONFIG_PATHS['time'],
-                cutoff_months=12,  # The classification cutoff
+                cutoff_months=6,  # The classification cutoff
                 format='tokens', 
                 split=split_name
             )
