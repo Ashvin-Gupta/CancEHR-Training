@@ -24,7 +24,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.resources.pretrainingvsfinetuning
+python -m src.resources.debug_val_leakage
 
 echo "Pipeline finished."
 deactivate
