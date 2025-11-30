@@ -3,7 +3,6 @@ import torch
 import pandas as pd
 import random
 from src.data.unified_dataset import UnifiedEHRDataset
-from src.pipelines.text_based.token_adaption2 import EHRTokenExtensionStaticTokenizer
 
 # --- CONFIGURATION ---
 DATA_DIR = "/data/scratch/qc25022/pancreas/tokenised_data_word_level/cprd_upgi" # UPDATE THIS
