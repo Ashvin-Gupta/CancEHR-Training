@@ -63,7 +63,6 @@ def check_val_leakage():
                 print(f"    Date: {cancer_date}")
                 print(f"    Keywords found: {found}")
                 print(f"    Text End: ...{sample['text'][-200:]}")
-                if leaks >= 5: break
     
     print(f"\nSummary on VALIDATION Set:")
     print(f"Total Cases: {total_cases}")
