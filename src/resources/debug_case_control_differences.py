@@ -107,7 +107,7 @@ def inspect_model_inputs(split_name='tuning', num_samples=3):
 
             print(f"  Model Input (Last 500 chars of decoded text):")
             print(f"  {'-'*40}")
-            print(f"  ...{decoded_text[-500:]}")
+            print(f"  ...{decoded_text}")
             print(f"  {'-'*40}")
             
             # Check for Future Leaks in the Decoded Text
