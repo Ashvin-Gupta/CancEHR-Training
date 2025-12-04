@@ -152,12 +152,12 @@ class UnifiedEHRDataset(Dataset):
         # For pretrain format: always apply 1-month cutoff for cancer patients
         if self.format == 'pretrain' and label > 0:
             actual_cutoff = 1  # Always 1 month for pretraining
-        elif self.cutoff_months is not None and label > 0:
+        elif self.cutoff_months is not None:
             actual_cutoff = self.cutoff_months
         else:
             actual_cutoff = None
         
-        if actual_cutoff is not None and label > 0:
+        if actual_cutoff is not None:
             cancer_date = self.subject_to_cancer_date.get(subject_id)
             if pd.notna(cancer_date):
                 cutoff_date = cancer_date - pd.DateOffset(months=actual_cutoff)
