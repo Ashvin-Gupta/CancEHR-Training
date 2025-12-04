@@ -49,7 +49,8 @@ def inspect_model_inputs(split_name='tuning', num_samples=3):
         time_lookup_file=CONFIG_PATHS['time'],
         cutoff_months=CUTOFF_MONTHS,
         format='text', 
-        split=split_name
+        split=split_name,
+        tokenizer=tokenizer
     )
 
     cases = []
