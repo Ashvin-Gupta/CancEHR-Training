@@ -25,7 +25,7 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd)"
 
-python -m src.resources.check_concept_drift
+python -m src.resources.debug_case_control_differences
 
 echo "Pipeline finished."
 deactivate
