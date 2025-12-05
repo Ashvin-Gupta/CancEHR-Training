@@ -165,7 +165,10 @@ class UnifiedEHRDataset(Dataset):
                 
                 truncated_ids = []
                 for i, ts in enumerate(timestamps):
-                    if ts == 0 or (ts is not None and ts < cutoff_timestamp):
+                    token_str = self.id_to_token_map.get(token_ids[i], "")
+                    # Keep: special tokens (ts==0), tokens before cutoff, OR the <end> token
+                    is_end_token = (token_str == '<end>')
+                    if ts == 0 or (ts is not None and ts < cutoff_timestamp) or is_end_token:
                         truncated_ids.append(token_ids[i])
                 token_ids = truncated_ids
         
