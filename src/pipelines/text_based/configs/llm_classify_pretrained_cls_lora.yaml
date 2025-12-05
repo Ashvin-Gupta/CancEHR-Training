@@ -21,7 +21,7 @@ wandb:
   run_name: "lora-12-month-logistic-8192"
 
 training:
-  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-12-month-logistic-8192"
+  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-12-month-logistic-8192_normalised"
   overwrite_output_dir: true
   epochs: 20
   batch_size: 4
