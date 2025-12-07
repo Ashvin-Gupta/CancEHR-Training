@@ -18,10 +18,10 @@ model:
 wandb:
   enabled: true
   project: "Pretrain-Qwen3-8B-Pancreas-classification-logisitc"
-  run_name: "lora-12-month-logistic-8192-6month"
+  run_name: "lora-6-month-logistic-8192"
 
 training:
-  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-12-month-logistic-8192-6month_normalised"
+  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-6-month-logistic-8192"
   overwrite_output_dir: true
   epochs: 20
   batch_size: 4
