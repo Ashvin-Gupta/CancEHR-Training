@@ -206,7 +206,8 @@ class UnifiedEHRDataset(Dataset):
                     next_code = string_codes[i+1]
                     if self.data_type == 'raw':
                         # Check if next token is a number (e.g., "45.5", "12")
-                        is_numeric = next_code.replace('.', '', 1).isdigit()
+                        safe_code = str(next_code)
+                        is_numeric = safe_code.replace('.', '', 1).isdigit()
                         is_next_a_value = is_numeric
                     else:
                         # Existing logic for 'binned' data (e.g., "low", "Q1")
