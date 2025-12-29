@@ -18,7 +18,7 @@ class UnifiedEHRDataset(Dataset):
         before the cancer diagnosis date.
     """
     def __init__(self, data_dir, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file,
-                 cutoff_months=None, max_sequence_length=512, format='tokens', split='train', tokenizer=None):
+                 cutoff_months=None, max_sequence_length=512, format='tokens', split='train', tokenizer=None, data_type='binned'):
         
         self.format = format
         self.cutoff_months = cutoff_months
@@ -27,6 +27,7 @@ class UnifiedEHRDataset(Dataset):
         
         # Load all necessary mappings and lookup tables
         self._load_mappings(vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file)
+        self.data_type = data_type
         # Load the patient records from the .pkl files for the specified split
         # self.patient_records = self._load_data(data_dir, split)
         if split == 'tuning':
@@ -38,7 +39,7 @@ class UnifiedEHRDataset(Dataset):
     def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""
         
-        vocab_df = pd.read_csv(vocab_file)
+        vocab_df = pd.read_csv(vocab_file, dtype={str: 'string'})
         self.id_to_token_map = pd.Series(vocab_df['str'].values, index=vocab_df['token']).to_dict()
 
         if self.format == 'text' or self.format == 'events':
@@ -119,6 +120,8 @@ class UnifiedEHRDataset(Dataset):
             elif token_string.startswith('LIFESTYLE//'):
                 code = token_string.split('//')[1].upper()
                 return f"<DEMOGRAPHIC> Lifestyle {code} "
+            elif token_string.replace('.', '', 1).isdigit():
+                return f"<VALUE> {token_string} "
             elif token_string.startswith('Q') and len(token_string) <= 4 and token_string[1:].isdigit():
                 return f"<VALUE> {token_string[1:]} "
             elif token_string.startswith('low') or token_string.startswith('normal') or token_string.startswith('high') or token_string.startswith('very low') or token_string.startswith('very high') and len(token_string) <= 9:
@@ -201,9 +204,13 @@ class UnifiedEHRDataset(Dataset):
                 
                 if has_next_token:
                     next_code = string_codes[i+1]
-                    is_next_a_quantile = next_code.startswith('low') or next_code.startswith('normal') or next_code.startswith('high') or next_code.startswith('very low') or next_code.startswith('very high') and len(next_code) <= 9
-                    # Check if the next token is a quantile (e.g., "Q2", "Q7")
-                    # is_next_a_quantile = (next_code.startswith('Q') and next_code[1:].isdigit())
+                    if self.data_type == 'raw':
+                        # Check if next token is a number (e.g., "45.5", "12")
+                        is_numeric = next_code.replace('.', '', 1).isdigit():
+                        is_next_a_value = is_numeric
+                    else:
+                        # Existing logic for 'binned' data (e.g., "low", "Q1")
+                        is_next_a_quantile = next_code.startswith('low') or next_code.startswith('normal') or next_code.startswith('high') or next_code.startswith('very low') or next_code.startswith('very high') and len(next_code) <= 9
 
                 # If we have a measurable concept AND its quantile value, combine them
                 if is_measurable and is_next_a_quantile:

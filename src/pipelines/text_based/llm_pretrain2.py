@@ -293,6 +293,7 @@ def main(config_path: str):
         "format": 'text',  # Use existing text format!
         "cutoff_months": data_config.get("cutoff_months", 1),  # Default 1-month cutoff
         "max_sequence_length": None  # No truncation - we'll pack sequences
+        "data_type": training_config.get('input_data', 'binned'),
     }
     
     print("\nLoading training data...")

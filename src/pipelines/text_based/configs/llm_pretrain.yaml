@@ -25,6 +25,7 @@ training:
   output_dir: "/data/scratch/qc25022/pancreas/experiments/Pretrain-Qwen3-8B-Pancreas-Raw"
   overwrite_output_dir: true
   framework: 'unsloth'  # Use peft for standard HF PEFT
+  input_data: raw # raw or binned
   
   # Training hyperparameters
   epochs: 5
