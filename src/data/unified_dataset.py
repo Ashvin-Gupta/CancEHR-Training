@@ -95,7 +95,7 @@ class UnifiedEHRDataset(Dataset):
             if token_string.startswith('<time_interval_'):
                 time_part = token_string.split('_')[-1].strip('>')
                 return f"<TIME> {self.time_lookup.get(time_part, time_part)} "
-            elif token_string.startswith('AGE: '):
+            elif token_string.startswith('AGE: ') or token_string.startswith('AGE'):
                 return f"<DEMOGRAPHIC> {token_string} "
             elif token_string.startswith('MEDICAL//BMI'):
                 return f"<DEMOGRAPHIC> {token_string.split('//')[1]} "
@@ -211,28 +211,49 @@ class UnifiedEHRDataset(Dataset):
                         is_next_a_value = is_numeric
                     else:
                         # Existing logic for 'binned' data (e.g., "low", "Q1")
-                        is_next_a_quantile = next_code.startswith('low') or next_code.startswith('normal') or next_code.startswith('high') or next_code.startswith('very low') or next_code.startswith('very high') and len(next_code) <= 9
+                        is_next_a_value = next_code.startswith('low') or next_code.startswith('normal') or next_code.startswith('high') or next_code.startswith('very low') or next_code.startswith('very high') and len(next_code) <= 9
 
                 # If we have a measurable concept AND its quantile value, combine them
-                if is_measurable and is_next_a_quantile:
-                    concept = self._translate_token(current_code) # e.g., "HbA1c"
-                    value_bin = self._translate_token(next_code)  # e.g., "Normal"
+                if is_measurable and is_next_a_value:
+                    concept = self._translate_token(current_code) 
+                    value_bin = self._translate_token(next_code)  
                     
-                    if concept and value_bin: # Only add if both are valid
-                        # Create the new combined token
-                        translated_phrases.append(f"{concept} {value_bin}") 
+                    # --- NEW LOGIC TO HANDLE UNITS ---
+                    unit_str = ""
+                    increment = 2 # Default: skip Code and Value
                     
-                    i += 2 # CRITICAL: Skip both the concept and its value
+                    # Check if there is a 3rd token (Potential Unit)
+                    if i + 2 < len(str(string_codes)):
+                        potential_unit = str(string_codes[i+2])
+                        
+                        # A unit is anything that is NOT a new event code or special token
+                        # Add any other prefixes you want to exclude here
+                        is_new_event = str(potential_unit).startswith((
+                            'LAB//', 'MEDICAL//', 'MEASUREMENT//', 
+                            'AGE:', 'AGE', 'GENDER//', 'ETHNICITY//', 'REGION//', 
+                            'LIFESTYLE//', '<start>', '<end>', '<time', 'MEDS_BIRTH'
+                        ))
+                        
+                        if not is_new_event:
+                            # It's a unit! (e.g., "mmol/L", "kg")
+                            unit_str = f" {potential_unit}"
+                            increment = 3 # Skip Code, Value, AND Unit
+                    
+                    if concept and value_bin: 
+                        # Append Concept + Value + Unit
+                        translated_phrases.append(f"{concept} {value_bin}{unit_str}") 
+                    
+                    i += increment
+                    # ---------------------------------
                 
                 # Otherwise, just translate the single token as normal
                 else:
                     phrase = self._translate_token(current_code)
-                    if phrase: # Add if not an empty string (like <start>, etc.)
+                    if phrase: 
                         translated_phrases.append(phrase)
                     
-                    i += 1 # CRITICAL: Skip just this one token
-                
-            # Changed to no space but would need to change this for the bert initialisation
+                    i += 1 
+            
             narrative = "".join(translated_phrases)
             
             return {
