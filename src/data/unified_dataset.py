@@ -39,7 +39,7 @@ class UnifiedEHRDataset(Dataset):
     def _load_mappings(self, vocab_file, labels_file, medical_lookup_file, lab_lookup_file, region_lookup_file, time_lookup_file):
         """Loads all vocabularies, translation lookups, and label information."""
         
-        vocab_df = pd.read_csv(vocab_file, dtype={str: 'string'})
+        vocab_df = pd.read_csv(vocab_file, dtype={'str': str})
         self.id_to_token_map = pd.Series(vocab_df['str'].values, index=vocab_df['token']).to_dict()
 
         if self.format == 'text' or self.format == 'events':
