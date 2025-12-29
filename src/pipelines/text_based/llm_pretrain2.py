@@ -292,7 +292,7 @@ def main(config_path: str):
         "time_lookup_file": data_config["time_lookup_filepath"],
         "format": 'text',  # Use existing text format!
         "cutoff_months": data_config.get("cutoff_months", 1),  # Default 1-month cutoff
-        "max_sequence_length": None  # No truncation - we'll pack sequences
+        "max_sequence_length": None,  # No truncation - we'll pack sequences
         "data_type": training_config.get('input_data', 'binned'),
     }
     
