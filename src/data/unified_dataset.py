@@ -195,7 +195,7 @@ class UnifiedEHRDataset(Dataset):
             translated_phrases = []
             i = 0
             while i < len(string_codes):
-                current_code = string_codes[i]
+                current_code = str(string_codes[i])
                 
                 # Check if the current token is a measurable concept
                 is_measurable = current_code.startswith(('LAB//', 'MEASUREMENT//', 'MEDICAL//BMI', 'MEDICAL//bp_'))
@@ -203,7 +203,7 @@ class UnifiedEHRDataset(Dataset):
                 is_next_a_quantile = False
                 
                 if has_next_token:
-                    next_code = string_codes[i+1]
+                    next_code = str(string_codes[i+1])
                     if self.data_type == 'raw':
                         # Check if next token is a number (e.g., "45.5", "12")
                         safe_code = str(next_code)
