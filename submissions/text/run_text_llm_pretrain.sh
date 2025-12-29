@@ -29,7 +29,7 @@ echo "Starting experiment from directory: $(pwd)"
 export PYTHONPATH="${BASE_DIR}:${PYTHONPATH}"
 
 # python -m src.pipelines.text_based.llm_pretrain2 --config_filepath src/pipelines/text_based/configs/llm_pretrain.yaml
-torchrun --nproc_per_node=2 --master_port=29501 src/pipelines/text_based/llm_pretrain2.py --config_filepath src/pipelines/text_based/configs/llm_pretrain.yaml
+torchrun --nproc_per_node=2 --master_port=29500 src/pipelines/text_based/llm_pretrain2.py --config_filepath src/pipelines/text_based/configs/llm_pretrain.yaml
 
 echo "Pipeline finished."
 deactivate
