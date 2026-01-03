@@ -96,7 +96,7 @@ def load_LoRA_model(config: dict):
     
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=base_model_name, 
-        max_seq_length=data_config['max_length'],
+        max_seq_length=data_config['max_length'], # Needs to be higher than the max length in the data
         dtype=None,
         load_in_4bit=training_config.get('load_in_4bit', True),
     )
