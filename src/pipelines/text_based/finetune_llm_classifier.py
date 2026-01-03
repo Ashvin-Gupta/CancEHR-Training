@@ -213,10 +213,11 @@ def main(config_path: str):
     binary_classification = not multi_label_task
     collate_fn = ClassificationCollator(
         tokenizer=tokenizer,
-        max_length=data_config['max_length'],
-        binary_classification=binary_classification
+        max_length=data_config.get('max_length'),
+        binary_classification=binary_classification,
+        truncation=False
     )
-    print(f"  - Max sequence length: {data_config['max_length']}")
+    print(f"  - Truncation: False (keeping full patient trajectories)")
     print(f"  - Binary classification: {binary_classification}")
     
     # 8. Train

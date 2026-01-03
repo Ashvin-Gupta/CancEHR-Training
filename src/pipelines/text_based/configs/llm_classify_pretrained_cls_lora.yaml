@@ -9,7 +9,7 @@ experiment:
 
 model:
   unsloth_model: "unsloth/Qwen3-8B-Base-unsloth-bnb-4bit"
-  pretrained_checkpoint: "/data/scratch/qc25022/pancreas/experiments/Pretrain-Qwen3-8B-Pancreas/checkpoint-19650"
+  pretrained_checkpoint: "/data/scratch/qc25022/pancreas/experiments/Pretrain-Qwen3-8B-Pancreas-Raw/checkpoint-19640"
   hidden_size: 4096
   num_labels: 2
   freeze_llm: true          # Keep base model frozen, only LoRA + classifier train
@@ -18,10 +18,10 @@ model:
 wandb:
   enabled: true
   project: "Pretrain-Qwen3-8B-Pancreas-classification-logisitc"
-  run_name: "lora-6-month-logistic-8192"
+  run_name: "lora-6-month-logistic-raw"
 
 training:
-  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-6-month-logistic-8192"
+  output_dir: "/data/scratch/qc25022/pancreas/experiments/lora-6-month-logistic-raw"
   overwrite_output_dir: true
   epochs: 20
   batch_size: 4
@@ -50,5 +50,5 @@ data:
   lab_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/LabLookUP.csv"
   region_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/RegionLookUp.csv"
   time_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/TimeLookUp.csv"
-  max_length: 8192
+  # max_length: 8192
 

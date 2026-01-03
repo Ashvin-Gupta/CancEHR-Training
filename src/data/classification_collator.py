@@ -24,10 +24,11 @@ class ClassificationCollator:
         binary_classification: If True, converts labels > 0 to 1 (cancer vs control)
     """
     
-    def __init__(self, tokenizer, max_length: int = 2048, binary_classification: bool = True):
+    def __init__(self, tokenizer, max_length: int = 2048, binary_classification: bool = True, truncation: bool = False):
         self.tokenizer = tokenizer
         self.max_length = max_length
         self.binary_classification = binary_classification
+        self.truncation = truncation
     
     def __call__(self, batch: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
         """
@@ -58,14 +59,18 @@ class ClassificationCollator:
         
         # Tokenize the text
         # This handles padding and creates attention masks automatically
-        encoded = self.tokenizer(
-            texts,
-            padding=True,  # Pad to longest sequence in batch
-            truncation=True,  # Truncate to max_length
-            max_length=self.max_length,
-            return_tensors='pt',  # Return PyTorch tensors
-            return_attention_mask=True  # Return attention masks
-        )
+        tokenizer_kwargs = {
+            'padding': True,  # Pad to longest sequence in batch
+            'truncation': self.truncation,  # No truncation by default
+            'return_tensors': 'pt',  # Return PyTorch tensors
+            'return_attention_mask': True  # Return attention masks
+        }
+        
+        # Only add max_length if truncation is enabled
+        if self.truncation and self.max_length is not None:
+            tokenizer_kwargs['max_length'] = self.max_length
+        
+        encoded = self.tokenizer(texts, **tokenizer_kwargs)
         
         return {
             'input_ids': encoded['input_ids'],
