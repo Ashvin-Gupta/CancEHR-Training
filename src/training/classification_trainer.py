@@ -261,7 +261,11 @@ def run_classification_training(
         # Gradient settings
         gradient_accumulation_steps=int(training_config.get('gradient_accumulation_steps', 1)),
         gradient_checkpointing=True,
-        
+
+        # Multi-GPU settings (NEW)
+        ddp_find_unused_parameters=False,  # Set to False for efficiency
+        dataloader_num_workers=training_config.get('dataloader_num_workers', 8),
+            
         # Precision
         fp16=bool(training_config.get('fp16', False)),
         bf16=bool(training_config.get('bf16', True)),
