@@ -18,7 +18,7 @@ from huggingface_hub import login
 from src.data.unified_dataset import UnifiedEHRDataset
 from src.data.classification_collator import ClassificationCollator
 from src.training.classification_trainer import LLMClassifier, run_classification_training
-from src.training.utils import load_LoRA_model
+from src.training.utils import load_LoRA_model, compute_and_sort_by_length
 from src.pipelines.text_based.token_adaption2 import EHRTokenExtensionStaticTokenizer
 from src.training.utils import seed_all
 
@@ -173,6 +173,21 @@ def main(config_path: str):
     train_dataset = UnifiedEHRDataset(split="train", **dataset_args)
     val_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
     test_dataset = UnifiedEHRDataset(split="held_out", **dataset_args)
+
+    use_length_sorting = data_config.get('sort_by_length', True)
+
+    if use_length_sorting:
+        print("\n" + "=" * 80)
+        print("Sorting datasets by sequence length for efficient batching...")
+        print("=" * 80)
+
+        train_dataset = compute_and_sort_by_length(train_dataset, tokenizer, shuffle_buckets=True, num_buckets=20)
+        val_dataset = compute_and_sort_by_length(val_dataset, tokenizer, shuffle_buckets=False)
+        test_dataset = compute_and_sort_by_length(test_dataset, tokenizer, shuffle_buckets=False)
+        
+        print("  ✓ Datasets sorted by length")
+
+
 
     print(f"  - Train dataset: {len(train_dataset)} patients")
     print(f"  - Validation dataset: {len(val_dataset)} patients")
