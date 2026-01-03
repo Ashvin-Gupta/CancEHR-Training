@@ -126,6 +126,12 @@ class LLMClassifier(nn.Module):
         # Gather the hidden states at the last valid position
         # Shape: (batch_size, hidden_size)
         last_hidden_states = hidden_states[range(batch_size), sequence_lengths]
+
+        if torch.distributed.get_rank() == 0 and torch.rand(1).item() < 0.01:  # Log 1% of batches
+            for i in range(min(2, batch_size)):
+                token_at_position = input_ids[i, sequence_lengths[i]].item()
+                print(f"  Patient {i}: extracting position {sequence_lengths[i]}, token_id={token_at_position}")
+                # You can decode this to see if it's EOS
         
         # Pass through classification head
         # Shape: (batch_size, num_labels)
@@ -261,6 +267,8 @@ def run_classification_training(
         # Gradient settings
         gradient_accumulation_steps=int(training_config.get('gradient_accumulation_steps', 1)),
         gradient_checkpointing=True,
+
+        group_by_length=True,
 
         # Multi-GPU settings (NEW)
         ddp_find_unused_parameters=False,  # Set to False for efficiency

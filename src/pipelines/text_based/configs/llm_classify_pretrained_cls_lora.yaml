@@ -41,6 +41,7 @@ training:
   early_stopping_patience: 5
   early_stopping_threshold: 0.001
   dataloader_num_workers: 8
+  gradient_checkpointing: true
 
 data:
   cutoff_months: 6
