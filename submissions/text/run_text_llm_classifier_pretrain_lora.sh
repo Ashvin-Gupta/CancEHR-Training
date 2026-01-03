@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -cwd                 
-#$ -pe smp 24
+#$ -pe smp 36
 #$ -l h_rt=240:0:0
 #$ -l h_vmem=7.5G
-#$ -l gpu=2
+#$ -l gpu=3
 #$ -l gpu_type=ampere
 #$ -l cluster=andrena
 #$ -j n
