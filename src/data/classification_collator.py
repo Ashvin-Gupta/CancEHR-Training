@@ -146,5 +146,6 @@ class ClassificationCollator:
             'long_sequences': self._long_sequence_count,
             'percentage_long': (self._long_sequence_count / self._total_sequences * 100) 
                                if self._total_sequences > 0 else 0
+        }
 
 
