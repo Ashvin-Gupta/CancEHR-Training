@@ -27,9 +27,11 @@ cd "${BASE_DIR}"
 
 echo "Starting experiment from directory: $(pwd) Pretrain with Lora"
 
+export PYTHONPATH="${BASE_DIR}:${PYTHONPATH}"
+
 # # Run the fine-tuning script
 torchrun --nproc_per_node=2 src/pipelines/text_based/finetune_llm_classifier.py \
---config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls_lora.yaml
+    --config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls_lora.yaml
 
 # python -m src.pipelines.text_based.finetune_llm_classifier \
 # --config_filepath src/pipelines/text_based/configs/llm_classify_pretrained_cls_lora.yaml #pretrained, classifier + lora
