@@ -177,6 +177,47 @@ def main(config_path: str):
     print(f"  - Train dataset: {len(train_dataset)} patients")
     print(f"  - Validation dataset: {len(val_dataset)} patients")
     print(f"  - Test dataset: {len(test_dataset)} patients")
+
+    print("\n" + "=" * 80)
+    print("Analyzing sequence lengths...")
+    print("=" * 80)
+
+    # Sample sequences to check lengths
+    sample_size = min(500, len(train_dataset))
+    sample_lengths = []
+
+    print(f"Sampling {sample_size} training sequences...")
+    for i in range(sample_size):
+        sample = train_dataset[i]
+        if sample is not None:
+            # Tokenize to get actual length
+            tokens = tokenizer.encode(sample['text'], add_special_tokens=True)
+            sample_lengths.append(len(tokens))
+
+    if sample_lengths:
+        sample_lengths_sorted = sorted(sample_lengths)
+        print(f"\nSequence Length Statistics (sample of {len(sample_lengths)} patients):")
+        print(f"  - Min length: {min(sample_lengths)} tokens")
+        print(f"  - Max length: {max(sample_lengths)} tokens")
+        print(f"  - Mean length: {sum(sample_lengths) / len(sample_lengths):.1f} tokens")
+        print(f"  - Median length: {sample_lengths_sorted[len(sample_lengths)//2]} tokens")
+        print(f"  - 95th percentile: {sample_lengths_sorted[int(len(sample_lengths)*0.95)]} tokens")
+        print(f"  - 99th percentile: {sample_lengths_sorted[int(len(sample_lengths)*0.99)]} tokens")
+        
+        model_max = data_config.get('max_length', 32768)
+        num_exceeding = sum(1 for l in sample_lengths if l > model_max)
+        print(f"\n  - Sequences exceeding model max ({model_max}): {num_exceeding} ({num_exceeding/len(sample_lengths)*100:.1f}%)")
+        
+        if num_exceeding > 0:
+            print(f"\n  ⚠️  WARNING: Some sequences exceed the model's max_length!")
+            print(f"     Consider setting 'handle_long_sequences' in your config to:")
+            print(f"     - 'truncate': Keep most recent events (recommended for EHR)")
+            print(f"     - 'warn': Truncate with warning (default)")
+            print(f"     - 'skip': Skip these patients")
+            print(f"     - 'error': Fail if any sequence is too long")
+    else:
+        print("  - No valid sequences found in sample")
+
     # Print a few examples
     print("\n" + "=" * 80)
     print("Sample data (last 500 chars):")
@@ -215,7 +256,8 @@ def main(config_path: str):
         tokenizer=tokenizer,
         max_length=data_config.get('max_length'),
         binary_classification=binary_classification,
-        truncation=False
+        truncation=False,
+        handle_long_sequences=data_config.get('handle_long_sequences', 'warn')
     )
     print(f"  - Truncation: False (keeping full patient trajectories)")
     print(f"  - Binary classification: {binary_classification}")
