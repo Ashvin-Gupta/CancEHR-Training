@@ -168,7 +168,8 @@ def main(config_path: str):
         "format": 'text',  # Return text narratives
         "cutoff_months": data_config.get("cutoff_months", 1),
         "max_sequence_length": None,  # No truncation at dataset level
-        "tokenizer": None  # Not needed for 'text' format
+        "tokenizer": None,  # Not needed for 'text' format
+        "data_type": data_config.get('data_type', 'raw')
     }
     
     train_dataset = UnifiedEHRDataset(split="train", **dataset_args)
