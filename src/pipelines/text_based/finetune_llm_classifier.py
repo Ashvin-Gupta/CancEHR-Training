@@ -14,6 +14,7 @@ import wandb
 import torch
 import pprint
 from huggingface_hub import login
+import random
 
 from src.data.unified_dataset import UnifiedEHRDataset
 from src.data.classification_collator import ClassificationCollator
@@ -173,6 +174,73 @@ def main(config_path: str):
     train_dataset = UnifiedEHRDataset(split="train", **dataset_args)
     val_dataset = UnifiedEHRDataset(split="tuning", **dataset_args)
     test_dataset = UnifiedEHRDataset(split="held_out", **dataset_args)
+
+    print("\n" + "=" * 80)
+    print("Sample Patient Trajectories (for debugging)")
+    print("=" * 80)
+
+    # Get 3 random indices
+    num_samples_to_show = 3
+    valid_indices = []
+    for i in range(len(train_dataset)):
+        sample = train_dataset[i]
+        if sample is not None:
+            valid_indices.append(i)
+        if len(valid_indices) >= 100:  # Sample from first 100 valid patients
+            break
+
+    if len(valid_indices) >= num_samples_to_show:
+        random_indices = random.sample(valid_indices, num_samples_to_show)
+    else:
+        random_indices = valid_indices
+
+    for idx_num, idx in enumerate(random_indices, 1):
+        sample = train_dataset[idx]
+        if sample is not None:
+            text = sample['text']
+            label = sample['label'].item() if torch.is_tensor(sample['label']) else sample['label']
+            
+            # Tokenize to get length
+            token_count = len(tokenizer.encode(text, add_special_tokens=True))
+            
+            print(f"\n{'─'*80}")
+            print(f"Patient {idx_num} (Index {idx}):")
+            print(f"  Label: {label} ({'Cancer' if label > 0 else 'Control'})")
+            print(f"  Token count: {token_count}")
+            print(f"  Text length: {len(text)} characters")
+            print(f"{'─'*80}")
+            
+            # Print first 1000 characters
+            print("First 1000 characters:")
+            print(text[:1000])
+            
+            # Print last 1000 characters
+            if len(text) > 1000:
+                print(f"\n... [skipped {len(text) - 2000} characters] ...\n")
+                print("Last 1000 characters:")
+                print(text[-1000:])
+            
+            # Look for "Unknown" in the text
+            unknown_count = text.count("Unknown")
+            if unknown_count > 0:
+                print(f"\n⚠️  WARNING: Found {unknown_count} 'Unknown' tokens in this trajectory!")
+                
+                # Show context around first few "Unknown" occurrences
+                print("\nContext around 'Unknown' tokens (first 3 occurrences):")
+                start = 0
+                for occurrence_num in range(min(3, unknown_count)):
+                    pos = text.find("Unknown", start)
+                    if pos != -1:
+                        context_start = max(0, pos - 100)
+                        context_end = min(len(text), pos + 100)
+                        context = text[context_start:context_end]
+                        print(f"\n  Occurrence {occurrence_num + 1} (position {pos}):")
+                        print(f"  ...{context}...")
+                        start = pos + 1
+
+    print("\n" + "=" * 80)
+    print("End of sample trajectories")
+    print("=" * 80 + "\n")
 
     use_length_sorting = data_config.get('sort_by_length', True)
 

@@ -52,7 +52,7 @@ data:
   lab_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/LabLookUP.csv"
   region_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/RegionLookUp.csv"
   time_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/TimeLookUp.csv"
-  max_length: 16348
+  max_length: 12000
   handle_long_sequences: "warn"
   sort_by_length: true
 

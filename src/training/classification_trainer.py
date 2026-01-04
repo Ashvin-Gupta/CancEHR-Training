@@ -130,7 +130,8 @@ class LLMClassifier(nn.Module):
         if torch.distributed.get_rank() == 0 and torch.rand(1).item() < 0.01:  # Log 1% of batches
             for i in range(min(2, batch_size)):
                 token_at_position = input_ids[i, sequence_lengths[i]].item()
-                print(f"  Patient {i}: extracting position {sequence_lengths[i]}, token_id={token_at_position}")
+                token_text = self.base_model.config.tokenizer.decode([token_at_position]) if hasattr(self.base_model.config, 'tokenizer') else "N/A"
+                print(f"  Patient {i}: extracting position {sequence_lengths[i]}, token_id={token_at_position}, token='{token_text}'")
                 # You can decode this to see if it's EOS
         
         # Pass through classification head
