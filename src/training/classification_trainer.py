@@ -44,12 +44,14 @@ class LLMClassifier(nn.Module):
         freeze_base: bool = True,
         trainable_param_keywords=None,
         multi_label: bool = False,
+        tokenizer=None
     ):
         super().__init__()
         self.base_model = base_model
         self.num_labels = num_labels
         self.multi_label = multi_label
         self.trainable_param_keywords = trainable_param_keywords or []
+        self.tokenizer = tokenizer
 
         if hasattr(self.base_model, "gradient_checkpointing_enable"):
             print("  - Enabling gradient checkpointing for base model")
@@ -125,14 +127,35 @@ class LLMClassifier(nn.Module):
         
         # Gather the hidden states at the last valid position
         # Shape: (batch_size, hidden_size)
-        last_hidden_states = hidden_states[range(batch_size), sequence_lengths]
-
         if torch.distributed.get_rank() == 0 and torch.rand(1).item() < 0.01:  # Log 1% of batches
             for i in range(min(2, batch_size)):
-                token_at_position = input_ids[i, sequence_lengths[i]].item()
-                token_text = self.base_model.config.tokenizer.decode([token_at_position]) if hasattr(self.base_model.config, 'tokenizer') else "N/A"
-                print(f"  Patient {i}: extracting position {sequence_lengths[i]}, token_id={token_at_position}, token='{token_text}'")
-                # You can decode this to see if it's EOS
+                seq_len = sequence_lengths[i].item()
+                token_at_position = input_ids[i, seq_len].item()
+                
+                # Decode using stored tokenizer
+                if self.tokenizer is not None:
+                    token_text = self.tokenizer.decode([token_at_position])
+                    eos_id = self.tokenizer.eos_token_id
+                    pad_id = self.tokenizer.pad_token_id
+                    is_eos = (token_at_position == eos_id)
+                    is_pad = (token_at_position == pad_id)
+                    
+                    print(f"\n  Patient {i} Debug:")
+                    print(f"    - Sequence length (from attention_mask): {seq_len}")
+                    print(f"    - Token at position {seq_len}: ID={token_at_position}, text='{token_text}'")
+                    print(f"    - Is EOS? {is_eos} (EOS ID={eos_id})")
+                    print(f"    - Is PAD? {is_pad} (PAD ID={pad_id})")
+                    print(f"    - Attention mask sum: {attention_mask[i].sum().item()}")
+                    print(f"    - Input IDs shape: {input_ids[i].shape}")
+                    
+                    # Show last 5 tokens
+                    last_5_positions = max(0, seq_len - 4)
+                    print(f"    - Last 5 tokens:")
+                    for pos in range(last_5_positions, min(seq_len + 2, input_ids.shape[1])):
+                        tid = input_ids[i, pos].item()
+                        ttext = self.tokenizer.decode([tid])
+                        mask_val = attention_mask[i, pos].item()
+                        print(f"        pos {pos}: ID={tid}, text='{ttext}', mask={mask_val}")
         
         # Pass through classification head
         # Shape: (batch_size, num_labels)

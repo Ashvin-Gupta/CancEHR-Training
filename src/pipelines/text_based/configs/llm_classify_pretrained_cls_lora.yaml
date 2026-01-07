@@ -54,6 +54,6 @@ data:
   time_lookup_filepath: "/data/home/qc25022/CancEHR-Training/src/resources/TimeLookUp.csv"
   max_length: 12000
   handle_long_sequences: "warn"
-  sort_by_length: true
+  sort_by_length: false
   data_type: "raw"
 
