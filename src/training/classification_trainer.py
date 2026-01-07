@@ -124,10 +124,21 @@ class LLMClassifier(nn.Module):
         # The attention_mask is 1 for real tokens, 0 for padding
         sequence_lengths = attention_mask.sum(dim=1) - 1  # -1 for 0-indexing
         batch_size = hidden_states.size(0)
+
+        last_hidden_states = hidden_states[range(batch_size), sequence_lengths]
+
         
-        # Gather the hidden states at the last valid position
-        # Shape: (batch_size, hidden_size)
-        if torch.distributed.get_rank() == 0 and torch.rand(1).item() < 0.01:  # Log 1% of batches
+        try:
+            is_main_process = torch.distributed.get_rank() == 0
+        except:
+            is_main_process = True  # Not using distributed training
+
+        # Print for first batch or randomly 1% of the time
+        if is_main_process and (not hasattr(self, '_debug_count') or self._debug_count < 5 or torch.rand(1).item() < 0.01):
+            if not hasattr(self, '_debug_count'):
+                self._debug_count = 0
+            self._debug_count += 1
+            
             for i in range(min(2, batch_size)):
                 seq_len = sequence_lengths[i].item()
                 token_at_position = input_ids[i, seq_len].item()
@@ -140,7 +151,9 @@ class LLMClassifier(nn.Module):
                     is_eos = (token_at_position == eos_id)
                     is_pad = (token_at_position == pad_id)
                     
-                    print(f"\n  Patient {i} Debug:")
+                    print(f"\n{'='*60}")
+                    print(f"  Patient {i} Debug (Batch #{self._debug_count}):")
+                    print(f"{'='*60}")
                     print(f"    - Sequence length (from attention_mask): {seq_len}")
                     print(f"    - Token at position {seq_len}: ID={token_at_position}, text='{token_text}'")
                     print(f"    - Is EOS? {is_eos} (EOS ID={eos_id})")
@@ -156,6 +169,9 @@ class LLMClassifier(nn.Module):
                         ttext = self.tokenizer.decode([tid])
                         mask_val = attention_mask[i, pos].item()
                         print(f"        pos {pos}: ID={tid}, text='{ttext}', mask={mask_val}")
+                    print(f"{'='*60}\n")
+                else:
+                    print(f"  WARNING: Tokenizer not available for debugging!")
         
         # Pass through classification head
         # Shape: (batch_size, num_labels)
