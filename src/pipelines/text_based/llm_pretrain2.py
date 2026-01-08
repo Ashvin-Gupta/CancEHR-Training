@@ -65,20 +65,21 @@ inference_prompt = '<start> <DEMOGRAPHIC> AGE: 70-74 <DEMOGRAPHIC> GENDER FEMALE
 
 
 def extract_text(base_dataset, tokenizer):
-        """Extracts all valid text narratives and adds EOS token."""
-        text_list = []
-        # Use eos_token if it exists, otherwise use an empty string
-        eos_token = tokenizer.eos_token if tokenizer.eos_token else ""
-        
-        print(f"  - Processing {len(base_dataset)} patients...")
-        # We iterate through the base_dataset to get the text
-        for i in range(len(base_dataset)):
-            item = base_dataset[i]
-            if item is not None:
-                # item['text'] is the narrative from UnifiedEHRDataset
-                text_list.append(item['text'] + eos_token)
-        print(f"  - Extracted {len(text_list)} valid narratives.")
-        return text_list
+    """Extracts all valid text narratives and prepares for pretraining."""
+    text_list = []
+    
+    print(f"  - Processing {len(base_dataset)} patients...")
+    for i in range(len(base_dataset)):
+        item = base_dataset[i]
+        if item is not None:
+            text = item['text']
+            # Remove dataset format tokens - they're not needed
+            text = text.replace('<start>', '').replace('<end>', '').strip()
+            # Don't add EOS here - the DataCollatorForLanguageModeling handles it
+            text_list.append(text)
+    
+    print(f"  - Extracted {len(text_list)} valid narratives.")
+    return text_list
 
 def verify_patient(train_text_list, tokenizer):
     print("\nVerifying data - First 1 patient narratives:")

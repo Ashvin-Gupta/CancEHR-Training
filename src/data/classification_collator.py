@@ -38,15 +38,6 @@ class ClassificationCollator:
     def __call__(self, batch: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
         """
         Collate a batch of samples.
-        
-        Args:
-            batch: List of dicts with keys 'text' (str) and 'label' (torch.Tensor)
-        
-        Returns:
-            Dict with:
-                - input_ids: (batch_size, seq_len) tokenized text
-                - attention_mask: (batch_size, seq_len) mask for padding
-                - labels: (batch_size,) classification labels
         """
         # Filter out None values (patients without labels)
         batch = [item for item in batch if item is not None]
@@ -57,9 +48,12 @@ class ClassificationCollator:
         texts = [item['text'] for item in batch]
         labels = torch.stack([item['label'] for item in batch])
         
+        # Clean up text - remove special tokens that shouldn't be tokenized as text
+        # These are dataset format tokens, not tokenizer tokens
+        texts = [text.replace('<start>', '').replace('<end>', '').strip() for text in texts]
+        
         # Convert to binary labels if needed
         if self.binary_classification:
-            # Label 0 = Control, Label > 0 = Cancer
             labels = (labels > 0).long()
         
         # Pre-check sequence lengths if we have a max_length and we're not truncating
@@ -134,9 +128,25 @@ class ClassificationCollator:
         
         encoded = self.tokenizer(texts, **tokenizer_kwargs)
         
+        input_ids = encoded['input_ids']
+        attention_mask = encoded['attention_mask']
+
+        # Add EOS token to each sequence
+        if self.tokenizer.eos_token_id is not None:
+            batch_size = input_ids.size(0)
+            eos_token_id = self.tokenizer.eos_token_id
+            
+            # Create EOS tokens tensor
+            eos_tokens = torch.full((batch_size, 1), eos_token_id, dtype=input_ids.dtype)
+            eos_attention = torch.ones((batch_size, 1), dtype=attention_mask.dtype)
+            
+            # Concatenate EOS to the end of each sequence
+            input_ids = torch.cat([input_ids, eos_tokens], dim=1)
+            attention_mask = torch.cat([attention_mask, eos_attention], dim=1)
+
         return {
-            'input_ids': encoded['input_ids'],
-            'attention_mask': encoded['attention_mask'],
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
             'labels': labels
         }
     
