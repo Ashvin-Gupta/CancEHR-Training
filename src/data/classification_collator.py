@@ -48,8 +48,7 @@ class ClassificationCollator:
         texts = [item['text'] for item in batch]
         labels = torch.stack([item['label'] for item in batch])
         
-        # Clean up text - remove special tokens that shouldn't be tokenized as text
-        # These are dataset format tokens, not tokenizer tokens
+        # Clean up text - remove dataset format tokens
         texts = [text.replace('<start>', '').replace('<end>', '').strip() for text in texts]
         
         # Convert to binary labels if needed
@@ -116,34 +115,60 @@ class ClassificationCollator:
         
         # Tokenize the text with dynamic padding
         tokenizer_kwargs = {
-            'padding': True,  # Pad to longest sequence in batch
+            'padding': False,  # DON'T pad yet
             'truncation': self.truncation,
             'return_tensors': 'pt',
-            'return_attention_mask': True
+            'return_attention_mask': True,
+            'add_special_tokens': True  # Adds BOS but not EOS for decoder models
         }
         
-        # Only add max_length if truncation is enabled
         if self.truncation and self.max_length is not None:
             tokenizer_kwargs['max_length'] = self.max_length
         
-        encoded = self.tokenizer(texts, **tokenizer_kwargs)
+        # Tokenize each text individually (no padding)
+        encoded_list = [self.tokenizer(text, **tokenizer_kwargs) for text in texts]
         
-        input_ids = encoded['input_ids']
-        attention_mask = encoded['attention_mask']
-
-        # Add EOS token to each sequence
+        # Append EOS to each sequence individually
         if self.tokenizer.eos_token_id is not None:
-            batch_size = input_ids.size(0)
             eos_token_id = self.tokenizer.eos_token_id
             
-            # Create EOS tokens tensor
-            eos_tokens = torch.full((batch_size, 1), eos_token_id, dtype=input_ids.dtype)
-            eos_attention = torch.ones((batch_size, 1), dtype=attention_mask.dtype)
+            for encoded in encoded_list:
+                # Append EOS token
+                eos_tensor = torch.tensor([[eos_token_id]], dtype=encoded['input_ids'].dtype)
+                eos_mask = torch.ones((1, 1), dtype=encoded['attention_mask'].dtype)
+                
+                encoded['input_ids'] = torch.cat([encoded['input_ids'], eos_tensor], dim=1)
+                encoded['attention_mask'] = torch.cat([encoded['attention_mask'], eos_mask], dim=1)
+        
+        # NOW pad all sequences to the same length
+        max_length_in_batch = max(enc['input_ids'].size(1) for enc in encoded_list)
+        pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else 0
+        
+        padded_input_ids = []
+        padded_attention_masks = []
+        
+        for encoded in encoded_list:
+            seq_len = encoded['input_ids'].size(1)
+            padding_length = max_length_in_batch - seq_len
             
-            # Concatenate EOS to the end of each sequence
-            input_ids = torch.cat([input_ids, eos_tokens], dim=1)
-            attention_mask = torch.cat([attention_mask, eos_attention], dim=1)
-
+            if padding_length > 0:
+                # Pad on the right
+                padding_ids = torch.full((1, padding_length), pad_token_id, dtype=encoded['input_ids'].dtype)
+                padding_mask = torch.zeros((1, padding_length), dtype=encoded['attention_mask'].dtype)
+                
+                padded_ids = torch.cat([encoded['input_ids'], padding_ids], dim=1)
+                padded_mask = torch.cat([encoded['attention_mask'], padding_mask], dim=1)
+            else:
+                padded_ids = encoded['input_ids']
+                padded_mask = encoded['attention_mask']
+            
+            padded_input_ids.append(padded_ids)
+            padded_attention_masks.append(padded_mask)
+        
+        # Stack into batch tensors
+        input_ids = torch.cat(padded_input_ids, dim=0)
+        attention_mask = torch.cat(padded_attention_masks, dim=0)
+        
         return {
             'input_ids': input_ids,
             'attention_mask': attention_mask,
