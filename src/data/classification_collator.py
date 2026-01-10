@@ -81,6 +81,9 @@ class ClassificationCollator:
                                 f"This warning will only show once."
                             )
                             self._warned_once = True
+                        # Don't decode/re-encode - just add to list and handle during tokenization
+                        filtered_texts.append(text)
+                        filtered_labels.append(label)
                         # Truncate from the start to keep the end (most recent medical events)
                         tokens = self.tokenizer.encode(text, add_special_tokens=False)
                         # Keep the last (max_length - 2) tokens, leaving room for special tokens
@@ -97,10 +100,7 @@ class ClassificationCollator:
                             self._warned_once = True
                         continue  # Skip this sample
                     elif self.handle_long_sequences == 'truncate':
-                        # Truncate from the start to keep the end
-                        tokens = self.tokenizer.encode(text, add_special_tokens=False)
-                        truncated_tokens = tokens[-(self.max_length - 2):]
-                        text = self.tokenizer.decode(truncated_tokens)
+                        # Don't decode/re-encode - just add to list and handle during tokenization
                         filtered_texts.append(text)
                         filtered_labels.append(label)
                 else:
@@ -126,19 +126,39 @@ class ClassificationCollator:
             tokenizer_kwargs['max_length'] = self.max_length
         
         # Tokenize each text individually (no padding)
-        encoded_list = [self.tokenizer(text, **tokenizer_kwargs) for text in texts]
-        
-        # Append EOS to each sequence individually
-        if self.tokenizer.eos_token_id is not None:
-            eos_token_id = self.tokenizer.eos_token_id
+        encoded_list = []
+        for text in texts:
+            encoded = self.tokenizer(text, **tokenizer_kwargs)
             
-            for encoded in encoded_list:
-                # Append EOS token
+            # Check if sequence is too long AFTER tokenization
+            seq_len = encoded['input_ids'].size(1)
+            
+            # Account for EOS token we'll add
+            max_allowed = self.max_length - 1 if self.tokenizer.eos_token_id is not None else self.max_length
+            
+            if seq_len > max_allowed:
+                # Truncate from the start (keep most recent)
+                # Keep last (max_allowed) tokens
+                encoded['input_ids'] = encoded['input_ids'][:, -max_allowed:]
+                encoded['attention_mask'] = encoded['attention_mask'][:, -max_allowed:]
+            
+            # Append EOS token if available
+            if self.tokenizer.eos_token_id is not None:
+                eos_token_id = self.tokenizer.eos_token_id
                 eos_tensor = torch.tensor([[eos_token_id]], dtype=encoded['input_ids'].dtype)
                 eos_mask = torch.ones((1, 1), dtype=encoded['attention_mask'].dtype)
                 
                 encoded['input_ids'] = torch.cat([encoded['input_ids'], eos_tensor], dim=1)
                 encoded['attention_mask'] = torch.cat([encoded['attention_mask'], eos_mask], dim=1)
+            
+            # Final safety check
+            final_len = encoded['input_ids'].size(1)
+            if final_len > self.max_length:
+                # This should never happen, but just in case
+                encoded['input_ids'] = encoded['input_ids'][:, :self.max_length]
+                encoded['attention_mask'] = encoded['attention_mask'][:, :self.max_length]
+            
+            encoded_list.append(encoded)
         
         # NOW pad all sequences to the same length
         max_length_in_batch = max(enc['input_ids'].size(1) for enc in encoded_list)
